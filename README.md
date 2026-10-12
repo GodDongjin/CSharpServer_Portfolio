@@ -251,19 +251,10 @@ DB 볼륨은 보존됩니다. Docker Desktop과 WSL 자체는 이 명령으로 �
 - Hero 캐시는 현재 연결 전용이며 외부 프로세스의 DB 변경을 실시간 동기화하지 않습니다.
 - 실제 DB·Redis 장애 주입, 커밋 응답 유실, DB 작업 진행 중 서버 종료는 추가 통합 검증 항목입니다. 저장소 대역을 사용한 실패 테스트와 구분합니다.
 
-## 관련 자료와 공개본
+## 관련 자료
 
-- [업로드 전 최종 확인](docs/RELEASE_CHECKLIST.md)
 - [검토 결과와 남은 검증](docs/PORTFOLIO_REVIEW.md)
 - [세션 종료·재사용 수정 기록](docs/SESSION_LIFETIME_REVIEW.md)
 - [공개 범위 정리](docs/PORTFOLIO_REDUCTION_PLAN.md)
-
-PowerShell 7에서 다음 명령으로 공개용 ZIP을 만들 수 있습니다.
-
-```powershell
-pwsh -File ./export-portfolio.ps1
-```
-
-`artifacts/CSharpServer.zip`에는 공개 소스·문서·테스트·로컬 실행 자료를 담으며, 기존 Git 이력·로컬 설정·빌드 산출물·로그·`TestResults`는 제외합니다.
-
-GitHub에 올릴 때는 ZIP을 새 폴더에 풀고, 그 안의 `CSharpServer` 폴더 내용을 저장소 루트로 사용합니다. 기존 작업 폴더의 `.git`과 로컬 백업을 함께 복사하지 않습니다.
+- [업로드 전 최종 확인](docs/RELEASE_CHECKLIST.md)
+- [공개 ZIP 제작·업로드 안내](docs/PUBLISHING.md)
