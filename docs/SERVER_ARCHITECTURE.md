@@ -2,14 +2,14 @@
 
 2026-10-12 현재 코드 기준입니다. [전체 구성도](../README.md#서버-전체-구성)는 클래스의 관계를, 아래 도식은 주요 메서드의 실행 순서를 설명합니다. 실선 흐름은 호출·진행, 점선은 반환 결과나 비동기 후속 처리를 나타냅니다. 실패 경로는 상태와 수명에 영향을 주는 경우를 중심으로 표시했습니다.
 
-**도식 표기:** 파랑은 네트워크, 초록은 게임 로직, 보라는 저장소, 주황은 큐·작업자, 노랑 마름모는 조건, 빨강은 실패 처리입니다. 둥근 도형은 시작·결과, 이중 테두리는 큐·작업 경계, 원통은 DB를 뜻합니다.
+**도식 표기:** 마름모는 조건, 둥근 도형은 시작·결과, 이중 테두리는 큐·작업 경계, 원통은 DB를 뜻합니다.
 
 시퀀스 다이어그램은 호출 번호와 배경 영역으로 준비·DB 처리·상태 반영 단계를 구분합니다.
 
 ## 1. 시작 · 연결 수락 · 세션 할당
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#e0f2fe", "primaryTextColor": "#0f172a", "primaryBorderColor": "#0369a1", "lineColor": "#64748b", "secondaryColor": "#dcfce7", "tertiaryColor": "#f8fafc", "textColor": "#0f172a", "actorBkg": "#e0f2fe", "actorBorder": "#0369a1", "actorTextColor": "#0f172a", "signalColor": "#475569", "signalTextColor": "#0f172a", "noteBkgColor": "#fef3c7", "noteTextColor": "#0f172a", "noteBorderColor": "#a16207", "labelBoxBkgColor": "#f1f5f9", "labelTextColor": "#0f172a"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#fafafa", "primaryTextColor": "#30363d", "primaryBorderColor": "#8b949e", "lineColor": "#8b949e", "secondaryColor": "#f2f3f4", "tertiaryColor": "#fafafa", "textColor": "#30363d", "actorBkg": "#f6f7f8", "actorBorder": "#8b949e", "actorTextColor": "#30363d", "signalColor": "#8b949e", "signalTextColor": "#30363d", "noteBkgColor": "#f6f7f8", "noteTextColor": "#30363d", "noteBorderColor": "#8b949e", "labelBoxBkgColor": "#f6f7f8", "labelTextColor": "#30363d", "clusterBkg": "#f6f7f8", "clusterBorder": "#c5cbd1", "edgeLabelBackground": "#fafafa", "activationBkgColor": "#e6e8eb", "activationBorderColor": "#8b949e", "sequenceNumberColor": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
 sequenceDiagram
     autonumber
     participant P as Program
@@ -17,7 +17,7 @@ sequenceDiagram
     participant S as Service
     participant L as Listen
     participant G as GameSession (Session 상속)
-    rect rgb(240, 249, 255)
+    rect rgb(246, 247, 248)
     P->>P: DB·Redis 연결 확인 / 게임 서비스·패킷 처리기 구성
     P->>M: Initialize(maxCount, GameSession factory)
     M->>M: 세션 풀 준비 / StartRelease 시작
@@ -27,7 +27,7 @@ sequenceDiagram
     S->>S: SocketHeartBeat.RunAsync 시작
     P->>P: MatchManager.Start()
     end
-    rect rgb(240, 253, 244)
+    rect rgb(246, 247, 248)
     Note over L,G: 새 TCP 연결의 Accept 완료
     L->>S: ReadPool.Pop() / WritePool.Pop()
     L->>M: CreateSession(socket, events, owner, handler)
@@ -47,7 +47,7 @@ sequenceDiagram
 ## 2. 패킷 수신 · 파싱 · 게임 로직 · 응답
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#e0f2fe", "primaryTextColor": "#0f172a", "primaryBorderColor": "#0369a1", "lineColor": "#64748b", "secondaryColor": "#dcfce7", "tertiaryColor": "#f8fafc", "textColor": "#0f172a", "actorBkg": "#e0f2fe", "actorBorder": "#0369a1", "actorTextColor": "#0f172a", "signalColor": "#475569", "signalTextColor": "#0f172a", "noteBkgColor": "#fef3c7", "noteTextColor": "#0f172a", "noteBorderColor": "#a16207", "labelBoxBkgColor": "#f1f5f9", "labelTextColor": "#0f172a"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#fafafa", "primaryTextColor": "#30363d", "primaryBorderColor": "#8b949e", "lineColor": "#8b949e", "secondaryColor": "#f2f3f4", "tertiaryColor": "#fafafa", "textColor": "#30363d", "actorBkg": "#f6f7f8", "actorBorder": "#8b949e", "actorTextColor": "#30363d", "signalColor": "#8b949e", "signalTextColor": "#30363d", "noteBkgColor": "#f6f7f8", "noteTextColor": "#30363d", "noteBorderColor": "#8b949e", "labelBoxBkgColor": "#f6f7f8", "labelTextColor": "#30363d", "clusterBkg": "#f6f7f8", "clusterBorder": "#c5cbd1", "edgeLabelBackground": "#fafafa", "activationBkgColor": "#e6e8eb", "activationBorderColor": "#8b949e", "sequenceNumberColor": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
 flowchart TD
     R["Session.ProcessReceive<br/>수신 버퍼에 누적"] --> F["OnRecv<br/>헤더와 길이 확인 · 완성된 패킷 추출"]
     F --> H["OnRecvPack → GSPacketHandler.HandlePacket<br/>패킷 ID별 delegate 호출"]
@@ -62,13 +62,13 @@ flowchart TD
     S --> IO["SendAsync / ProcessSend<br/>부분 송신이면 남은 구간 전송"]
     O -->|false 또는 처리 예외| D["Disconnect(요청 당시 연결 ID)"]
     T -->|Heartbeat Pong| HB["ReceiveHeartbeatPong<br/>연결 ID · sequence · 제한 시간 확인"]
-    classDef network fill:#e0f2fe,stroke:#0369a1,color:#0f172a,stroke-width:1.5px
-    classDef game fill:#dcfce7,stroke:#15803d,color:#0f172a,stroke-width:1.5px
-    classDef storage fill:#ede9fe,stroke:#7c3aed,color:#0f172a,stroke-width:1.5px
-    classDef queue fill:#fff7ed,stroke:#c2410c,color:#0f172a,stroke-width:1.5px
-    classDef decision fill:#fef3c7,stroke:#a16207,color:#0f172a,stroke-width:1.5px
-    classDef error fill:#fee2e2,stroke:#b91c1c,color:#0f172a,stroke-width:1.5px
-    classDef terminal fill:#f1f5f9,stroke:#475569,color:#0f172a,stroke-width:1.5px
+    classDef network fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef game fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef storage fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef queue fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef decision fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef error fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef terminal fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
     class R,F,H,P,IO,HB network
     class Q,W queue
     class A,G game
@@ -84,7 +84,7 @@ flowchart TD
 ## 3. 로그인과 Hero 최초 로드
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#e0f2fe", "primaryTextColor": "#0f172a", "primaryBorderColor": "#0369a1", "lineColor": "#64748b", "secondaryColor": "#dcfce7", "tertiaryColor": "#f8fafc", "textColor": "#0f172a", "actorBkg": "#e0f2fe", "actorBorder": "#0369a1", "actorTextColor": "#0f172a", "signalColor": "#475569", "signalTextColor": "#0f172a", "noteBkgColor": "#fef3c7", "noteTextColor": "#0f172a", "noteBorderColor": "#a16207", "labelBoxBkgColor": "#f1f5f9", "labelTextColor": "#0f172a"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#fafafa", "primaryTextColor": "#30363d", "primaryBorderColor": "#8b949e", "lineColor": "#8b949e", "secondaryColor": "#f2f3f4", "tertiaryColor": "#fafafa", "textColor": "#30363d", "actorBkg": "#f6f7f8", "actorBorder": "#8b949e", "actorTextColor": "#30363d", "signalColor": "#8b949e", "signalTextColor": "#30363d", "noteBkgColor": "#f6f7f8", "noteTextColor": "#30363d", "noteBorderColor": "#8b949e", "labelBoxBkgColor": "#f6f7f8", "labelTextColor": "#30363d", "clusterBkg": "#f6f7f8", "clusterBorder": "#c5cbd1", "edgeLabelBackground": "#fafafa", "activationBkgColor": "#e6e8eb", "activationBorderColor": "#8b949e", "sequenceNumberColor": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
 flowchart TD
     P[["GSPacket.HandleReqLogin"]] --> Input{"데모 로그인 입력이 유효한가?"}
     Input -->|아니오| Error[["현재 연결이면 실패 ACK"]]
@@ -99,13 +99,13 @@ flowchart TD
     Success -->|아니오| Error
     Success -->|예| Load[["Heroes.Load → MarkLoginCompleted"]]
     Load --> Ack(["현재 연결 재확인 → 성공 ACK"])
-    classDef network fill:#e0f2fe,stroke:#0369a1,color:#0f172a,stroke-width:1.5px
-    classDef game fill:#dcfce7,stroke:#15803d,color:#0f172a,stroke-width:1.5px
-    classDef storage fill:#ede9fe,stroke:#7c3aed,color:#0f172a,stroke-width:1.5px
-    classDef queue fill:#fff7ed,stroke:#c2410c,color:#0f172a,stroke-width:1.5px
-    classDef decision fill:#fef3c7,stroke:#a16207,color:#0f172a,stroke-width:1.5px
-    classDef error fill:#fee2e2,stroke:#b91c1c,color:#0f172a,stroke-width:1.5px
-    classDef terminal fill:#f1f5f9,stroke:#475569,color:#0f172a,stroke-width:1.5px
+    classDef network fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef game fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef storage fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef queue fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef decision fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef error fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef terminal fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
     class P,Login,Load game
     class User,Hero storage
     class Input,Exists,Current,Success decision
@@ -121,7 +121,7 @@ flowchart TD
 ## 4. Hero 갱신의 DB·메모리 반영 순서
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#e0f2fe", "primaryTextColor": "#0f172a", "primaryBorderColor": "#0369a1", "lineColor": "#64748b", "secondaryColor": "#dcfce7", "tertiaryColor": "#f8fafc", "textColor": "#0f172a", "actorBkg": "#e0f2fe", "actorBorder": "#0369a1", "actorTextColor": "#0f172a", "signalColor": "#475569", "signalTextColor": "#0f172a", "noteBkgColor": "#fef3c7", "noteTextColor": "#0f172a", "noteBorderColor": "#a16207", "labelBoxBkgColor": "#f1f5f9", "labelTextColor": "#0f172a"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#fafafa", "primaryTextColor": "#30363d", "primaryBorderColor": "#8b949e", "lineColor": "#8b949e", "secondaryColor": "#f2f3f4", "tertiaryColor": "#fafafa", "textColor": "#30363d", "actorBkg": "#f6f7f8", "actorBorder": "#8b949e", "actorTextColor": "#30363d", "signalColor": "#8b949e", "signalTextColor": "#30363d", "noteBkgColor": "#f6f7f8", "noteTextColor": "#30363d", "noteBorderColor": "#8b949e", "labelBoxBkgColor": "#f6f7f8", "labelTextColor": "#30363d", "clusterBkg": "#f6f7f8", "clusterBorder": "#c5cbd1", "edgeLabelBackground": "#fafafa", "activationBkgColor": "#e6e8eb", "activationBorderColor": "#8b949e", "sequenceNumberColor": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
 sequenceDiagram
     autonumber
     participant P as GSPacket
@@ -129,12 +129,12 @@ sequenceDiagram
     participant R as HeroDB
     participant W as DB Worker / DbJob
     participant DB as MySQL
-    rect rgb(240, 253, 244)
+    rect rgb(246, 247, 248)
     P->>H: UpdateAsync(..., isCurrent)
     H->>H: 필드 허용 여부 · Hero 소유권 확인
     H->>R: UpdateAsync(userId, heroId, field, value)
     end
-    rect rgb(245, 243, 255)
+    rect rgb(246, 247, 248)
     R->>W: MysqlDataBase.ExecuteAsync로 작업 등록
     W->>W: MySqlDataSource에서 연결 확보
     W->>DB: HeroDB의 작업 delegate 실행 / BeginTransaction
@@ -145,7 +145,7 @@ sequenceDiagram
     W-->>R: 저장된 DBHero
     R-->>H: 결과 반환
     end
-    rect rgb(240, 253, 244)
+    rect rgb(246, 247, 248)
     H->>H: 현재 연결 재확인 / 결과 ID·소유자 검증
     H->>H: 메모리 Hero 스냅샷 교체
     H-->>P: ACK_HERO_UPDATE
@@ -160,7 +160,7 @@ sequenceDiagram
 ## 5. 매칭 참가 · 성립 · 연결 종료
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#e0f2fe", "primaryTextColor": "#0f172a", "primaryBorderColor": "#0369a1", "lineColor": "#64748b", "secondaryColor": "#dcfce7", "tertiaryColor": "#f8fafc", "textColor": "#0f172a", "actorBkg": "#e0f2fe", "actorBorder": "#0369a1", "actorTextColor": "#0f172a", "signalColor": "#475569", "signalTextColor": "#0f172a", "noteBkgColor": "#fef3c7", "noteTextColor": "#0f172a", "noteBorderColor": "#a16207", "labelBoxBkgColor": "#f1f5f9", "labelTextColor": "#0f172a"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#fafafa", "primaryTextColor": "#30363d", "primaryBorderColor": "#8b949e", "lineColor": "#8b949e", "secondaryColor": "#f2f3f4", "tertiaryColor": "#fafafa", "textColor": "#30363d", "actorBkg": "#f6f7f8", "actorBorder": "#8b949e", "actorTextColor": "#30363d", "signalColor": "#8b949e", "signalTextColor": "#30363d", "noteBkgColor": "#f6f7f8", "noteTextColor": "#30363d", "noteBorderColor": "#8b949e", "labelBoxBkgColor": "#f6f7f8", "labelTextColor": "#30363d", "clusterBkg": "#f6f7f8", "clusterBorder": "#c5cbd1", "edgeLabelBackground": "#fafafa", "activationBkgColor": "#e6e8eb", "activationBorderColor": "#8b949e", "sequenceNumberColor": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
 flowchart TD
     J(["GSPacket.HandleReqPvpMatchPending"]) --> M(["MatchManager.JoinAsync<br/>gate 획득 · 연결/중복 검사"])
     M --> R(["RedisMatchmakingStore.AddAsync<br/>티켓 SET NX · TTL 120초"])
@@ -176,13 +176,13 @@ flowchart TD
     Schedule -.-> Next(["다음 TickAsync → DisconnectAsync<br/>같은 연결의 대기·방 정리"])
     Next --> Cleanup(["FlushCleanupAsync<br/>토큰 일치 티켓 삭제 · 실패 시 재시도"])
     Next --> Notify(["상대 연결이 유효하면 종료 알림"])
-    classDef network fill:#e0f2fe,stroke:#0369a1,color:#0f172a,stroke-width:1.5px
-    classDef game fill:#dcfce7,stroke:#15803d,color:#0f172a,stroke-width:1.5px
-    classDef storage fill:#ede9fe,stroke:#7c3aed,color:#0f172a,stroke-width:1.5px
-    classDef queue fill:#fff7ed,stroke:#c2410c,color:#0f172a,stroke-width:1.5px
-    classDef decision fill:#fef3c7,stroke:#a16207,color:#0f172a,stroke-width:1.5px
-    classDef error fill:#fee2e2,stroke:#b91c1c,color:#0f172a,stroke-width:1.5px
-    classDef terminal fill:#f1f5f9,stroke:#475569,color:#0f172a,stroke-width:1.5px
+    classDef network fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef game fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef storage fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef queue fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef decision fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef error fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef terminal fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
     class J,M,P,Room,N,S,D,Notify game
     class R,C,Cleanup storage
     class T,Schedule,Next queue
@@ -199,7 +199,7 @@ flowchart TD
 ## 6. 연결 종료 · 세션 반환 · 재사용
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#e0f2fe", "primaryTextColor": "#0f172a", "primaryBorderColor": "#0369a1", "lineColor": "#64748b", "secondaryColor": "#dcfce7", "tertiaryColor": "#f8fafc", "textColor": "#0f172a", "actorBkg": "#e0f2fe", "actorBorder": "#0369a1", "actorTextColor": "#0f172a", "signalColor": "#475569", "signalTextColor": "#0f172a", "noteBkgColor": "#fef3c7", "noteTextColor": "#0f172a", "noteBorderColor": "#a16207", "labelBoxBkgColor": "#f1f5f9", "labelTextColor": "#0f172a"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#fafafa", "primaryTextColor": "#30363d", "primaryBorderColor": "#8b949e", "lineColor": "#8b949e", "secondaryColor": "#f2f3f4", "tertiaryColor": "#fafafa", "textColor": "#30363d", "actorBkg": "#f6f7f8", "actorBorder": "#8b949e", "actorTextColor": "#30363d", "signalColor": "#8b949e", "signalTextColor": "#30363d", "noteBkgColor": "#f6f7f8", "noteTextColor": "#30363d", "noteBorderColor": "#8b949e", "labelBoxBkgColor": "#f6f7f8", "labelTextColor": "#30363d", "clusterBkg": "#f6f7f8", "clusterBorder": "#c5cbd1", "edgeLabelBackground": "#fafafa", "activationBkgColor": "#e6e8eb", "activationBorderColor": "#8b949e", "sequenceNumberColor": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
 flowchart TD
     D["Session.Disconnect(connectionId)<br/>현재 연결 확인 · 종료 표시 · 소켓 닫기"]
     D --> Hook["GameSession.OnDisconnected<br/>매칭 정리 요청 예약"]
@@ -212,13 +212,13 @@ flowchart TD
     Reset --> Event["Session.RetrunEventArgs<br/>Service 이벤트 풀 반환 · 참조 정리"]
     Event --> Pool[["활성 사전 제거 → 세션 풀에 등록<br/>사용 슬롯 반환"]]
     Pool --> Next(["다음 연결의 CreateSession에서 재사용"])
-    classDef network fill:#e0f2fe,stroke:#0369a1,color:#0f172a,stroke-width:1.5px
-    classDef game fill:#dcfce7,stroke:#15803d,color:#0f172a,stroke-width:1.5px
-    classDef storage fill:#ede9fe,stroke:#7c3aed,color:#0f172a,stroke-width:1.5px
-    classDef queue fill:#fff7ed,stroke:#c2410c,color:#0f172a,stroke-width:1.5px
-    classDef decision fill:#fef3c7,stroke:#a16207,color:#0f172a,stroke-width:1.5px
-    classDef error fill:#fee2e2,stroke:#b91c1c,color:#0f172a,stroke-width:1.5px
-    classDef terminal fill:#f1f5f9,stroke:#475569,color:#0f172a,stroke-width:1.5px
+    classDef network fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef game fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef storage fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef queue fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef decision fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef error fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef terminal fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
     class D,Event network
     class Hook,Reset game
     class Pending,Register,Worker,Pool queue
@@ -233,7 +233,7 @@ flowchart TD
 ## 7. 서버 종료
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#e0f2fe", "primaryTextColor": "#0f172a", "primaryBorderColor": "#0369a1", "lineColor": "#64748b", "secondaryColor": "#dcfce7", "tertiaryColor": "#f8fafc", "textColor": "#0f172a", "actorBkg": "#e0f2fe", "actorBorder": "#0369a1", "actorTextColor": "#0f172a", "signalColor": "#475569", "signalTextColor": "#0f172a", "noteBkgColor": "#fef3c7", "noteTextColor": "#0f172a", "noteBorderColor": "#a16207", "labelBoxBkgColor": "#f1f5f9", "labelTextColor": "#0f172a"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#fafafa", "primaryTextColor": "#30363d", "primaryBorderColor": "#8b949e", "lineColor": "#8b949e", "secondaryColor": "#f2f3f4", "tertiaryColor": "#fafafa", "textColor": "#30363d", "actorBkg": "#f6f7f8", "actorBorder": "#8b949e", "actorTextColor": "#30363d", "signalColor": "#8b949e", "signalTextColor": "#30363d", "noteBkgColor": "#f6f7f8", "noteTextColor": "#30363d", "noteBorderColor": "#8b949e", "labelBoxBkgColor": "#f6f7f8", "labelTextColor": "#30363d", "clusterBkg": "#f6f7f8", "clusterBorder": "#c5cbd1", "edgeLabelBackground": "#fafafa", "activationBkgColor": "#e6e8eb", "activationBorderColor": "#8b949e", "sequenceNumberColor": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
 flowchart TD
     Stop(["Ctrl+C → Program의 종료 요청 완료"]) --> Service["Service.StopServerAsync<br/>반복 호출은 같은 Task 반환"]
     Service --> Listen["Listen.StopAsyncListen<br/>새 연결 수락 중단"]
@@ -246,13 +246,13 @@ flowchart TD
     Match --> DB["MysqlDataBase.DisposeAsync<br/>DB Worker 작업 배출·종료 → DataSource 해제"]
     DB --> Redis["RedisManager.ShutdownAsync"]
     Redis --> Done(["서버 정상 종료 완료"])
-    classDef network fill:#e0f2fe,stroke:#0369a1,color:#0f172a,stroke-width:1.5px
-    classDef game fill:#dcfce7,stroke:#15803d,color:#0f172a,stroke-width:1.5px
-    classDef storage fill:#ede9fe,stroke:#7c3aed,color:#0f172a,stroke-width:1.5px
-    classDef queue fill:#fff7ed,stroke:#c2410c,color:#0f172a,stroke-width:1.5px
-    classDef decision fill:#fef3c7,stroke:#a16207,color:#0f172a,stroke-width:1.5px
-    classDef error fill:#fee2e2,stroke:#b91c1c,color:#0f172a,stroke-width:1.5px
-    classDef terminal fill:#f1f5f9,stroke:#475569,color:#0f172a,stroke-width:1.5px
+    classDef network fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef game fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef storage fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef queue fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef decision fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef error fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef terminal fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
     class Service,Listen,HB,Pools network
     class Match game
     class DB,Redis storage
