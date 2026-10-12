@@ -1,69 +1,44 @@
 # 도식 편집 원본
 
-전체 구성도는 본문 폭에서 읽을 수 있도록 [overview.svg](overview.svg)에 1000px 너비의 고정 배치를 적용했습니다. 아래 전체 구성도 Mermaid는 구성 요소와 연결 관계의 명세이며, 자동 배치 결과는 본문의 SVG 배치와 다릅니다. SVG의 `data-node`, `data-from`, `data-to` 속성으로 관계를 확인할 수 있습니다. `data-object="S1"`은 동일 인스턴스의 경계이며, `data-reference="S1"`은 아래 구역의 참조 표식입니다. 두 `data-port="TCP-A"` 표식은 같은 TCP 연결의 이어지는 지점입니다.
+[전체 구성도 SVG](overview.svg)는 1000px 너비의 고정 배치로 접속 준비, 일반 요청 처리, 연결 감시·세션 반환을 구분합니다. 상자는 클래스 인스턴스가 아니라 처리 단계입니다. GameSession은 Session을 상속한 연결 객체 하나이며, 수신·작업 큐·송신은 그 객체의 기능입니다. `data-step`은 일반 요청 처리 단계, `data-branch`는 요청 종류별 분기를 표시합니다.
 
-나머지 7개 호출 흐름도는 아래 Mermaid 원본을 Mermaid 11.4.1과 맑은 고딕으로 렌더링한 SVG입니다. 도식을 수정하면 대응 SVG도 함께 수정·생성하고 글자와 여백을 확인합니다. 코드 블록은 편집용이며 본문 표시에는 영향을 주지 않습니다.
+아래 전체 구성도 Mermaid는 SVG에 담은 흐름의 편집용 명세입니다. 실선은 처리 진행, 점선은 결과가 응답으로 이어지는 흐름이며 자동 배치 결과는 SVG와 다를 수 있습니다. 나머지 7개 호출 흐름도는 Mermaid 11.4.1과 맑은 고딕으로 렌더링한 SVG입니다. 도식을 수정하면 대응 SVG와 본문 설명도 함께 갱신하고, README 표시 폭에서 글자와 연결선을 확인합니다.
 
 <a id="overview"></a>
 
 ## 서버 전체 구성
 
-전체 구성도는 15개 구성 요소와 18개 관계를 유지합니다. GameSession과 기반 Session 기능은 하나의 S1 경계에 묶습니다. 아래 S1은 별도 노드가 아닌 참조 표식입니다. TCP는 A 표식으로 긴 우회선을 대신하고, Repository → DB Worker와 Redis 저장소 → Redis는 수직으로 연결합니다.
+접속 준비는 새 연결을 수락할 때 수행하며, 일반 요청 처리는 연결 이후 패킷마다 반복합니다. 연결 감시와 세션 반환은 별도로 표시합니다. 일반 요청 그림은 정상 처리와 필요한 응답을 요약하며, 오류 응답·실패·종료의 상세 분기는 개별 호출 흐름도를 참고합니다. 매칭 성립 알림은 별도 TickAsync에서 시작합니다.
 
 ```text
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Malgun Gothic", "fontSize": "16px", "primaryColor": "#fafafa", "primaryTextColor": "#30363d", "primaryBorderColor": "#8b949e", "lineColor": "#8b949e", "secondaryColor": "#f2f3f4", "tertiaryColor": "#fafafa", "textColor": "#30363d", "actorBkg": "#f6f7f8", "actorBorder": "#8b949e", "actorTextColor": "#30363d", "signalColor": "#8b949e", "signalTextColor": "#30363d", "noteBkgColor": "#f6f7f8", "noteTextColor": "#30363d", "noteBorderColor": "#8b949e", "labelBoxBkgColor": "#f6f7f8", "labelTextColor": "#30363d", "clusterBkg": "#f6f7f8", "clusterBorder": "#c5cbd1", "edgeLabelBackground": "#fafafa", "activationBkgColor": "#e6e8eb", "activationBorderColor": "#8b949e", "sequenceNumberColor": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 32, "rankSpacing": 42, "htmlLabels": false, "padding": 18, "wrappingWidth": 400}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 32, "wrap": false, "diagramMarginX": 32, "diagramMarginY": 24, "actorFontSize": 16, "noteFontSize": 16, "messageFontSize": 16}, "htmlLabels": false}}%%
 flowchart TB
-    Client(["클라이언트 / ServerSmokeTester"])
-    subgraph Core["ServerCore"]
-        Service["Service · Listen<br/>연결 수락 · 이벤트 풀 · 서버 종료"]
-        Manager[["SessionManager<br/>세션 풀 · 활성 세션 · 반환 Channel"]]
-        Session["Session<br/>수신 · 패킷 조립 · 작업 큐 · 송신"]
-        Heartbeat["SocketHeartBeat<br/>로그인 제한 · Ping/Pong 감시"]
-        DB[["MysqlDataBase<br/>DbWorkerPool → DbWorker<br/>DB 작업 큐 · 연결 확보 · 완료 통지"]]
+    subgraph Connection["01 접속 준비"]
+        direction LR
+        Client["클라이언트 / TCP 접속"] --> Listen["Service · Listen / 연결 수락"]
+        Listen --> Manager["SessionManager / 풀에서 세션 할당"]
+        Manager --> Ready["GameSession : Session / 초기화 후 수신 시작"]
     end
-    subgraph Game["GameServer"]
-        GameSession["GameSession : Session<br/>로그인 사용자 · HeroManager"]
-        Handler["GSPacketHandler<br/>패킷 ID 확인 · 파싱 · 작업 등록"]
-        Packet["GSPacket<br/>로그인 · Hero · 매칭 요청 처리"]
-        Hero["HeroManager<br/>연결별 Hero 상태 · 저장 후 반영"]
-        Repo["DataBaseRepository<br/>LoginDB · HeroDB"]
-        Match["MatchManager<br/>매칭 대기 · 방 · 종료 정리"]
-        Store["RedisMatchmakingStore<br/>티켓 등록 · Lua 확인/삭제"]
+
+    subgraph Request["02 일반 요청 처리"]
+        Receive["① 수신 · 패킷 조립 / Session"] --> Parse["② 패킷 ID 확인 · Protobuf 파싱 / GSPacketHandler"]
+        Parse --> Queue["③ 세션별 작업 큐 / Session.EnqueueAsyncJob / 하나씩 await"]
+        Queue --> Logic["④ 게임 로직 실행 / GSPacket"]
+        Logic --> Login["로그인 · Hero 최초 로드 / LoginDB · HeroDB → DB Worker → MySQL / 연결 메모리에 보관"]
+        Logic --> Hero["Hero 조회는 메모리 / 변경은 HeroDB → DB Worker → MySQL / 커밋 후 현재 연결 확인·반영"]
+        Logic --> Match["MatchManager: 대기·방 상태 / RedisMatchmakingStore → Redis / Redis에는 티켓 저장"]
+        Login -.->|처리 결과 / 응답이 필요한 경우| Send["⑤ 응답 등록 · 송신 / GSPacket → Session.SendPacket → SendAsync"]
+        Hero -.-> Send
+        Match -.-> Send
+        Send --> Reply["클라이언트가 응답 수신"]
     end
-    MySQL[("MySQL<br/>사용자 · Hero")]
-    Redis[("Redis<br/>매칭 티켓")]
-    Client -->|접속| Service
-    Service -->|세션 할당 요청| Manager
-    Manager -->|초기화 · 반환 후 재사용| GameSession
-    GameSession -.->|상속| Session
-    Client <-->|TCP| Session
-    Heartbeat -->|활성 연결 스냅샷| Manager
-    Heartbeat -->|연결별 검사| Session
-    Session -->|완성된 패킷 전달| Handler
-    Handler -->|일반 요청<br/>작업 큐 등록| Session
-    Session -->|큐에서 게임<br/>핸들러 실행| Packet
-    Packet --> Hero
-    Packet -->|로그인 조회| Repo
-    Hero -->|DB 저장 요청| Repo
-    Repo --> DB
-    DB --> MySQL
-    Packet --> Match
-    Match --> Store
-    Store --> Redis
-    classDef network fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
-    classDef game fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
-    classDef storage fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
-    classDef queue fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
-    classDef decision fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
-    classDef error fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
-    classDef terminal fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
-    class Service,Session,Heartbeat network
-    class GameSession,Handler,Packet,Hero,Match game
-    class Repo,Store,MySQL,Redis storage
-    class Manager,DB queue
-    class Client terminal
-    style Core fill:#f6f7f8,stroke:#c5cbd1,stroke-width:1px,color:#30363d
-    style Game fill:#f6f7f8,stroke:#c5cbd1,stroke-width:1px,color:#30363d
+
+    subgraph Lifetime["03 연결 감시와 세션 반환"]
+        Heartbeat["SocketHeartBeat / 로그인·Ping·Pong 제한 / Pong은 ②에서 확인하고 게임 큐 생략"]
+        Disconnect["연결 종료"] --> Wait["진행 중 I/O·작업 완료"]
+        Wait --> Release["반환 큐"]
+        Release --> Reset["초기화 · 자원 정리"]
+        Reset --> Reuse["다음 연결에서 재사용"]
+    end
 ```
 
 <a id="connection"></a>
