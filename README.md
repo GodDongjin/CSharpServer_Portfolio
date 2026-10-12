@@ -26,14 +26,14 @@ flowchart TB
         Handler["GSPacketHandler<br/>패킷 ID 확인 · 파싱 · 작업 등록"]
         Packet["GSPacket<br/>로그인 · Hero · 매칭 요청 처리"]
         Hero["HeroManager<br/>연결별 Hero 상태 · 저장 후 반영"]
-        Repo["DBRepository<br/>LoginDB · HeroDB"]
+        Repo["DataBaseRepository<br/>LoginDB · HeroDB"]
         Match["MatchManager<br/>매칭 대기 · 방 · 종료 정리"]
         Store["RedisMatchmakingStore<br/>티켓 등록 · Lua 확인/삭제"]
     end
     MySQL[("MySQL<br/>사용자 · Hero")]
     Redis[("Redis<br/>매칭 티켓")]
     Client -->|접속| Service
-    Service -->|세션 할당 요청| Manager
+    Service -->|Listen에서 세션 할당 요청| Manager
     Manager -->|초기화 · 반환 후 재사용| GameSession
     GameSession -.->|상속| Session
     Client <-->|TCP| Session
