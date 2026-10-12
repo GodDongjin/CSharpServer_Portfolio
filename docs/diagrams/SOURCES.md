@@ -1,44 +1,39 @@
 # 도식 편집 원본
 
-[전체 구성도 SVG](overview.svg)는 1000px 너비의 고정 배치로 접속 준비, 일반 요청 처리, 연결 감시·세션 반환을 구분합니다. 상자는 클래스 인스턴스가 아니라 처리 단계입니다. GameSession은 Session을 상속한 연결 객체 하나이며, 수신·작업 큐·송신은 그 객체의 기능입니다. `data-step`은 일반 요청 처리 단계, `data-branch`는 요청 종류별 분기를 표시합니다.
+[서버 구조도 SVG](overview.svg)는 1160px 너비의 고정 배치로 프로세스·프로젝트 경계, 기능별 책임과 외부 시스템 연결을 표시합니다. `data-boundary`는 서버 프로세스, `data-project`는 프로젝트, `data-component`는 기능 묶음, `data-external`은 외부 시스템을 나타냅니다. 프로젝트 사이의 화살표는 참조 관계, 양방향 선은 외부 통신입니다.
 
-아래 전체 구성도 Mermaid는 SVG에 담은 흐름의 편집용 명세입니다. 실선은 처리 진행, 점선은 결과가 응답으로 이어지는 흐름이며 자동 배치 결과는 SVG와 다를 수 있습니다. 나머지 7개 호출 흐름도는 Mermaid 11.4.1과 맑은 고딕으로 렌더링한 SVG입니다. 도식을 수정하면 대응 SVG와 본문 설명도 함께 갱신하고, README 표시 폭에서 글자와 연결선을 확인합니다.
+아래 전체 구성도 Mermaid는 구조도의 편집용 명세이며 자동 배치 결과는 SVG와 다를 수 있습니다. 나머지 7개 호출 흐름도는 Mermaid 11.4.1과 맑은 고딕으로 렌더링한 SVG입니다. 도식을 수정하면 대응 SVG와 본문 설명도 함께 갱신하고, README 표시 폭에서 글자와 연결선을 확인합니다.
 
 <a id="overview"></a>
 
 ## 서버 전체 구성
 
-접속 준비는 새 연결을 수락할 때 수행하며, 일반 요청 처리는 연결 이후 패킷마다 반복합니다. 연결 감시와 세션 반환은 별도로 표시합니다. 일반 요청 그림은 정상 처리와 필요한 응답을 요약하며, 오류 응답·실패·종료의 상세 분기는 개별 호출 흐름도를 참고합니다. 매칭 성립 알림은 별도 TickAsync에서 시작합니다.
+GameServer와 ServerCore는 같은 서버 프로세스 안의 프로젝트입니다. GameServer가 ServerCore를 참조하며, GameSession은 Session을 상속합니다. 내부 상자는 기능 묶음으로, 별도 프로세스나 실행 단계를 뜻하지 않습니다. 클라이언트의 TCP 연결, MySQL 접근, Redis 티켓 접근만 외부 통신선으로 표시합니다. RedisManager가 준비한 연결은 Program을 통해 RedisMatchmakingStore에 전달됩니다.
 
 ```text
 flowchart TB
-    subgraph Connection["01 접속 준비"]
-        direction LR
-        Client["클라이언트 / TCP 접속"] --> Listen["Service · Listen / 연결 수락"]
-        Listen --> Manager["SessionManager / 풀에서 세션 할당"]
-        Manager --> Ready["GameSession : Session / 초기화 후 수신 시작"]
+    Client["클라이언트 / 게임 클라이언트 · ServerSmokeTester"]
+    subgraph Process["GameServer 프로세스 / 단일 .NET 프로세스"]
+        subgraph Game["GameServer / 게임 기능 · 실행 프로젝트"]
+            Program["Program / 설정 로드 · 객체 구성 · 서버 수명 관리"]
+            Packets["패킷 · 게임 핸들러 / GSPacketHandler · GSPacket / Protocol"]
+            State["연결별 게임 상태 / GameSession : Session / HeroManager"]
+            Match["매칭 / MatchManager / 메모리의 대기 · 방 상태"]
+            Repositories["저장소 접근 / DataBaseRepository / LoginDB · HeroDB / RedisMatchmakingStore"]
+        end
+        subgraph Core["ServerCore / 공통 서버 라이브러리"]
+            Network["TCP 네트워크 / Service · Listen / SocketAsyncEventArgs · 버퍼"]
+            SessionRuntime["세션 · 연결 관리 / Session · SessionManager / SocketHeartBeat · 풀·큐"]
+            MySqlRuntime["MySQL 실행 기반 / MysqlDataBase / DbWorkerPool · DbWorker"]
+            RedisRuntime["Redis 연결 기반 / RedisManager"]
+        end
+        Game -->|프로젝트 참조| Core
     end
-
-    subgraph Request["02 일반 요청 처리"]
-        Receive["① 수신 · 패킷 조립 / Session"] --> Parse["② 패킷 ID 확인 · Protobuf 파싱 / GSPacketHandler"]
-        Parse --> Queue["③ 세션별 작업 큐 / Session.EnqueueAsyncJob / 하나씩 await"]
-        Queue --> Logic["④ 게임 로직 실행 / GSPacket"]
-        Logic --> Login["로그인 · Hero 최초 로드 / LoginDB · HeroDB → DB Worker → MySQL / 연결 메모리에 보관"]
-        Logic --> Hero["Hero 조회는 메모리 / 변경은 HeroDB → DB Worker → MySQL / 커밋 후 현재 연결 확인·반영"]
-        Logic --> Match["MatchManager: 대기·방 상태 / RedisMatchmakingStore → Redis / Redis에는 티켓 저장"]
-        Login -.->|처리 결과 / 응답이 필요한 경우| Send["⑤ 응답 등록 · 송신 / GSPacket → Session.SendPacket → SendAsync"]
-        Hero -.-> Send
-        Match -.-> Send
-        Send --> Reply["클라이언트가 응답 수신"]
-    end
-
-    subgraph Lifetime["03 연결 감시와 세션 반환"]
-        Heartbeat["SocketHeartBeat / 로그인·Ping·Pong 제한 / Pong은 ②에서 확인하고 게임 큐 생략"]
-        Disconnect["연결 종료"] --> Wait["진행 중 I/O·작업 완료"]
-        Wait --> Release["반환 큐"]
-        Release --> Reset["초기화 · 자원 정리"]
-        Reset --> Reuse["다음 연결에서 재사용"]
-    end
+    MySQL[("MySQL / 사용자 · Hero")]
+    Redis[("Redis / 매칭 티켓")]
+    Client <-->|TCP| Network
+    MySqlRuntime <-->|SQL| MySQL
+    Repositories <-->|티켓| Redis
 ```
 
 <a id="connection"></a>

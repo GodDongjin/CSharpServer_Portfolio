@@ -31,15 +31,19 @@ C# / .NET 기반 비동기 TCP 게임 서버 개인 포트폴리오입니다. �
 
 ## 서버 전체 구성
 
-**접속 준비**, **일반 요청 처리**, **연결 감시·세션 반환**을 나누어 표시했습니다. 일반 요청은 **수신 → 파싱 → 세션 작업 큐 → 게임 로직 → 응답** 순서로 위에서 아래로 따라가면 됩니다. 실선은 처리 진행을, 점선은 처리 결과가 응답으로 이어지는 흐름을 나타냅니다.
+서버는 **하나의 GameServer 프로세스** 안에서 동작합니다. **GameServer** 프로젝트가 게임 기능을 담당하고, **ServerCore** 라이브러리의 네트워크·세션·저장소 기반을 사용합니다. 클라이언트와 MySQL·Redis는 프로세스 밖에 표시했습니다.
 
-![서버 전체 구성과 요청 처리 흐름](docs/diagrams/overview.svg)
+![서버 구조도](docs/diagrams/overview.svg)
 
-[확대해서 보기](docs/diagrams/overview.svg) · [편집 원본](docs/diagrams/SOURCES.md#overview) · [주요 코드 호출 흐름](docs/SERVER_ARCHITECTURE.md)
+[확대해서 보기](docs/diagrams/overview.svg) · [편집 원본](docs/diagrams/SOURCES.md#overview)
 
-로그인 시 MySQL에서 Hero를 읽어 연결 메모리에 보관합니다. 이후 Hero 조회는 메모리에서 처리하고, 변경은 MySQL 커밋 후 현재 연결을 확인해 반영합니다. 매칭 대기·방은 GameServer 메모리에 있으며 Redis에는 티켓을 저장합니다.
+큰 테두리는 프로세스, 색상 영역은 프로젝트, 내부 상자는 기능 묶음입니다. 프로젝트 사이의 화살표는 **참조 관계**, 양방향 선은 **외부 통신**을 나타냅니다.
 
-그림은 일반 요청의 정상 경로를 요약합니다. 매칭 성립 알림은 별도 `TickAsync` 작업자에서 시작하며, Pong은 게임 작업 큐를 거치지 않습니다. 실패·연결 종료 분기와 실제 메서드 호출 순서는 [상세 문서](docs/SERVER_ARCHITECTURE.md)에서 설명합니다.
+- `GameSession`은 ServerCore의 `Session`을 상속하며, 로그인 사용자와 연결별 Hero 상태를 보관합니다.
+- 매칭 대기·방 상태는 GameServer 메모리에, 사용자·Hero 데이터는 MySQL에, 매칭 티켓은 Redis에 보관합니다.
+- `Program`이 설정과 객체 구성을 담당하며, `RedisManager`가 준비한 연결을 `RedisMatchmakingStore`에서 사용합니다.
+
+패킷 처리와 종료 등의 실행 순서는 [주요 코드 호출 흐름](docs/SERVER_ARCHITECTURE.md)에서 별도로 설명합니다.
 
 ## 핵심 설계 상세
 
