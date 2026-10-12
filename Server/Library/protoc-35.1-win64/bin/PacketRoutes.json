@@ -1,0 +1,107 @@
+[
+    {
+        "Name": "REQ_LOGIN",
+        "Id": 1002,
+        "Message": "REQ_LOGIN",
+        "Handler": "HandleReqLogin",
+        "Constant": "Login"
+    },
+    {
+        "Name": "ACK_LOGIN",
+        "Id": 1003,
+        "Message": "ACK_LOGIN",
+        "Handler": "",
+        "Constant": "LoginReply"
+    },
+    {
+        "Name": "REQ_HERO_INFO_LOAD",
+        "Id": 1006,
+        "Message": "REQ_HERO_LIST",
+        "Handler": "HandleReqHeroInfoLoad",
+        "Constant": "HeroList"
+    },
+    {
+        "Name": "ACK_HERO_INFO_LOAD",
+        "Id": 1007,
+        "Message": "ACK_HERO_LIST",
+        "Handler": "",
+        "Constant": "HeroListReply"
+    },
+    {
+        "Name": "REQ_HERO_UPDATE",
+        "Id": 1010,
+        "Message": "REQ_HERO_UPDATE",
+        "Handler": "HandleReqHeroUpdate",
+        "Constant": "HeroUpdate"
+    },
+    {
+        "Name": "ACK_HERO_UPDATE",
+        "Id": 1011,
+        "Message": "ACK_HERO_UPDATE",
+        "Handler": "",
+        "Constant": "HeroUpdateReply"
+    },
+    {
+        "Name": "REQ_PVP_MATCH_PENDING",
+        "Id": 1018,
+        "Message": "REQ_MATCH_JOIN",
+        "Handler": "HandleReqPvpMatchPending",
+        "Constant": "MatchJoin"
+    },
+    {
+        "Name": "ACK_PVP_MATCH_PENDING",
+        "Id": 1019,
+        "Message": "ACK_MATCH",
+        "Handler": "",
+        "Constant": "MatchJoinReply"
+    },
+    {
+        "Name": "REQ_PVP_MATCH_PENDING_CANCEL",
+        "Id": 1021,
+        "Message": "REQ_MATCH_CANCEL",
+        "Handler": "HandleReqPvpMatchPendingCancel",
+        "Constant": "MatchCancel"
+    },
+    {
+        "Name": "ACK_PVP_MATCH_PENDING_CANCEL",
+        "Id": 1022,
+        "Message": "ACK_MATCH",
+        "Handler": "",
+        "Constant": "MatchCancelReply"
+    },
+    {
+        "Name": "SEND_PVP_MATCH",
+        "Id": 1023,
+        "Message": "ACK_MATCH",
+        "Handler": "",
+        "Constant": "MatchNotice"
+    },
+    {
+        "Name": "REQ_PVP_MATCH_LEAVE",
+        "Id": 1100,
+        "Message": "REQ_MATCH_LEAVE",
+        "Handler": "HandleReqPvpMatchLeave",
+        "Constant": "MatchLeave"
+    },
+    {
+        "Name": "ACK_PVP_MATCH_LEAVE",
+        "Id": 1101,
+        "Message": "ACK_MATCH",
+        "Handler": "",
+        "Constant": "MatchLeaveReply"
+    },
+    {
+        "Name": "SEND_HEARTBEAT_PING",
+        "Id": 1102,
+        "Message": "SEND_HEARTBEAT_PING",
+        "Handler": "",
+        "Constant": "HeartbeatPing"
+    },
+    {
+        "Name": "REQ_HEARTBEAT_PONG",
+        "Id": 1103,
+        "Message": "REQ_HEARTBEAT_PONG",
+        "Handler": "",
+        "Constant": "HeartbeatPong"
+    }
+]

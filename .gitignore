@@ -1,0 +1,48 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# .NET
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editors
+.vscode/
+.idea/
+
+# Secrets / env
+.env
+*.env
+secrets.json
+appsettings.*.local.json
+
+# Logs
+*.log
+
+# Build output and local-only portfolio inputs
+Build/
+Publish/
+**/Publish/
+*.log.txt
+**/test-results/
+**/Logs/
+**/Config/config.local.json
+samples/game-tables/
+artifacts/
+TestResults/
+*.trx
+
+**/Config/*.local.json
+
+# 프로토콜 원본과 패킷 생성 스크립트는 공개하고 protoc 실행 파일은 로컬에서 준비한다.
+!Server/Library/protoc-35.1-win64/bin/
+Server/Library/protoc-35.1-win64/bin/protoc.exe

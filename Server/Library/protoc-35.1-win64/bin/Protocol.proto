@@ -1,0 +1,79 @@
+syntax = "proto3";
+package Protocol;
+
+import "Enum.proto";
+import "Struct.proto";
+
+option csharp_namespace = "CSharp.Protocol";
+
+// 클라이언트는 받은 Ping 번호를 Pong에 그대로 담아 응답한다.
+message SEND_HEARTBEAT_PING
+{
+	int64 sequence = 1;
+}
+
+message REQ_HEARTBEAT_PONG
+{
+	int64 sequence = 1;
+}
+
+// 기존 로그인 요청 필드는 유지하며, 데모용 시드 ID만 사용한다.
+// 계정 생성 요청과 비밀번호 입력은 거절하고, 이름은 DB에서 조회한다.
+message REQ_LOGIN
+{
+	bool is_create = 1;
+	string id = 2;
+	string pw = 3;
+	string name = 4;
+}
+
+message ACK_LOGIN
+{
+	LOGIN_ERROR result = 1;
+	USER_INFO user = 2;
+}
+
+message REQ_HERO_LIST
+{
+}
+
+message ACK_HERO_LIST
+{
+	RESULT_CODE result = 1;
+	repeated HERO_INFO heroes = 2;
+}
+
+message REQ_HERO_UPDATE
+{
+	int64 hero_id = 1;
+	HERO_FIELD field = 2;
+	bool value = 3;
+}
+
+message ACK_HERO_UPDATE
+{
+	RESULT_CODE result = 1;
+	HERO_INFO hero = 2;
+}
+
+message REQ_MATCH_JOIN
+{
+}
+
+message REQ_MATCH_CANCEL
+{
+}
+
+message REQ_MATCH_LEAVE
+{
+}
+
+// 매칭 요청의 응답과 상태 변경 알림에 공통으로 사용한다.
+message ACK_MATCH
+{
+	RESULT_CODE result = 1;
+	MATCH_STATE state = 2;
+	int64 match_id = 3;
+	USER_INFO opponent = 4;
+	string reason = 5;
+}

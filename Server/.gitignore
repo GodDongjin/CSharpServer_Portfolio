@@ -1,0 +1,8 @@
+bin/
+obj/
+.vs/
+*.user
+
+# bin 폴더의 proto 원본과 생성 스크립트는 포함하고 protoc 실행 파일은 제외한다.
+!Library/protoc-35.1-win64/bin/
+Library/protoc-35.1-win64/bin/protoc.exe

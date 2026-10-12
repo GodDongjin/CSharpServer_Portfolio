@@ -1,0 +1,5 @@
+{
+  "Database": { "Server": "127.0.0.1", "Port": 3307, "Database": "csharp_demo", "UserId": "demo", "Password": "demo-local-only", "MinimumPoolSize": 0, "MaximumPoolSize": 20, "WorkerCount": 4 },
+  "Redis": { "Ip": "127.0.0.1", "Port": 6380, "Username": "", "Password": "", "DatabaseNumber": 0 },
+  "Server": { "IpAddress": "127.0.0.1", "Port": 7777, "MaxConnections": 100 }
+}

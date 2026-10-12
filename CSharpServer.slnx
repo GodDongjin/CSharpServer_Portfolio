@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Server/ServerCore/ServerCore.csproj" />
+  <Project Path="Server/ServerCore.Tests/ServerCore.Tests.csproj" />
+  <Project Path="Server/GameServer/GameServer.csproj" />
+  <Project Path="Server/GameServer.Tests/GameServer.Tests.csproj" />
+  <Project Path="ServerSmokeTester/ServerSmokeTester.csproj" />
+</Solution>
