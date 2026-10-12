@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1905" viewBox="0 0 1000 1905" role="img" aria-labelledby="title desc">
 <title id="title">서버 전체 구성</title>
-<desc id="desc">연결과 세션, 패킷과 게임 로직, DB 작업과 저장소 순서로 배치한 전체 구성도. 기존의 15개 구성 요소와 18개 연결 관계를 유지한다. Session 참조는 같은 객체를 가리킨다.</desc>
+<desc id="desc">15개 구성 요소와 18개 관계를 유지한다. GameSession과 Session은 S1 경계 안의 같은 객체다. S1 참조 표식은 새 객체가 아니다. A 원형 표식 둘은 같은 TCP 연결의 양 끝을 연결한다.</desc>
 <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M 0 0 L 8 4 L 0 8 Z" fill="#697580" /></marker></defs>
 <style>
 text{font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;fill:#30363d}
@@ -8,7 +8,7 @@ text{font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;fill:#30
 </style>
 <rect width="1000" height="1904.4" fill="#fff" />
 <text x="38.095" y="32.2" class="section" text-anchor="start"><tspan x="38.095" dy="0">서버 전체 구성</tspan></text>
-<text x="38.095" y="59.8" class="body" text-anchor="start"><tspan x="38.095" dy="0">구성 요소의 호출·참조 관계 · 위에서 아래로 읽기</tspan></text>
+<text x="38.095" y="59.8" class="body" text-anchor="start"><tspan x="38.095" dy="0">A: 같은 TCP 연결 · S1: 같은 세션 객체</tspan></text>
 <g data-node="Client">
 <rect class="node" x="291.667" y="87.4" width="416.667" height="57.04" rx="36.905" />
 <text x="500" y="115" class="name" text-anchor="middle"><tspan x="500" dy="0">클라이언트 / ServerSmokeTester</tspan></text>
@@ -21,9 +21,9 @@ text{font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;fill:#30
 <text x="66.667" y="826.16" class="section" text-anchor="start"><tspan x="66.667" dy="0">02  패킷과 게임 로직</tspan></text>
 <text x="66.667" y="851" class="badge" text-anchor="start"><tspan x="66.667" dy="0">GameServer · 수신 큐에서 게임 로직 실행</tspan></text>
 <rect class="panel" x="38.095" y="1492.24" width="923.81" height="377.2" rx="9.524" />
-<text x="66.667" y="1522.6" class="section" text-anchor="start"><tspan x="66.667" dy="0">03  DB 작업과 저장소</tspan></text>
-<text x="66.667" y="1547.44" class="badge" text-anchor="start"><tspan x="66.667" dy="0">DB Worker는 ServerCore · 사용자/Hero는 MySQL · 매칭 티켓은 Redis</tspan></text>
-<path data-from="Client" data-to="Service" class="edge" d="M 404.762 144.44 V 162.84 H 38.095 V 303.6 H 57.143" marker-end="url(#arrow)" />
+<text x="500" y="1522.6" class="section" text-anchor="middle"><tspan x="500" dy="0">03  DB 작업과 저장소</tspan></text>
+<text x="500" y="1547.44" class="badge" text-anchor="middle"><tspan x="500" dy="0">DB 작업 큐 · 외부 저장소</tspan></text>
+<g data-object="S1"><rect x="548" y="414" width="412" height="324" rx="8" fill="#f1f3f5" stroke="#abb3bb" stroke-width="1.2" /><text x="564" y="437" class="badge" text-anchor="start"><tspan x="564" dy="0">S1 · 연결 객체 1개</tspan></text></g><path data-from="Client" data-to="Service" class="edge" d="M 404.762 144.44 V 162.84 H 38.095 V 303.6 H 57.143" marker-end="url(#arrow)" />
 <rect x="154.762" y="146.28" width="59.524" height="25.76" fill="#fff" />
 <text x="184.524" y="162.84" class="edge-label" text-anchor="middle"><tspan x="184.524" dy="0">접속</tspan></text>
 <path data-from="Service" data-to="Manager" class="edge" d="M 433.333 303.6 H 566.667" marker-end="url(#arrow)" />
@@ -35,15 +35,11 @@ text{font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;fill:#30
 <path data-from="Heartbeat" data-to="Manager" class="edge" d="M 245.238 444.36 V 406.64 H 509.524 V 343.16 H 566.667" marker-end="url(#arrow)" />
 <rect x="260.119" y="381.8" width="182.143" height="25.76" fill="#fff" />
 <text x="351.19" y="398.36" class="edge-label" text-anchor="middle"><tspan x="351.19" dy="0">활성 연결 스냅샷</tspan></text>
-<path data-from="Heartbeat" data-to="Session" class="edge" d="M 245.238 549.24 V 644.92 H 304.762" marker-end="url(#arrow)" />
+<path data-from="Heartbeat" data-to="Session" class="edge" d="M245.238 549.24 V644.92 H566.667" marker-end="url(#arrow)" />
 <rect x="148.81" y="577.76" width="130.952" height="25.76" fill="#fff" />
 <text x="214.286" y="594.32" class="edge-label" text-anchor="middle"><tspan x="214.286" dy="0">연결별 검사</tspan></text>
-<path data-from="GameSession" data-to="Session" class="edge" d="M 754.762 549.24 V 644.92 H 695.238" marker-end="url(#arrow)" stroke-dasharray="5 4" />
-<rect x="767.857" y="577.76" width="59.524" height="25.76" fill="#fff" />
-<text x="797.619" y="594.32" class="edge-label" text-anchor="middle"><tspan x="797.619" dy="0">상속</tspan></text>
-<path data-from="Client" data-to="Session" class="edge" d="M 291.667 126.96 H 19.048 V 686.32 H 304.762" marker-end="url(#arrow)" marker-start="url(#arrow)" />
-<rect x="79.167" y="677.12" width="51.19" height="25.76" fill="#fff" />
-<text x="104.762" y="693.68" class="edge-label" text-anchor="middle"><tspan x="104.762" dy="0">TCP</tspan></text>
+<path data-from="GameSession" data-to="Session" class="edge" d="M754.762 549.24 V615.48" marker-end="url(#arrow)" stroke-dasharray="5 4" />
+<rect x="776.0" y="568" width="58" height="28" fill="#f8f9fa" /><text x="805" y="588" class="edge-label" text-anchor="middle"><tspan x="805" dy="0">상속</tspan></text><path data-from="Client" data-to="Session" class="edge" d="M291.667 115 H248 M478 686 H566.667" marker-end="url(#arrow)" marker-start="url(#arrow)" data-connection="TCP-A" />
 <g data-node="Service">
 <rect class="node" x="57.143" y="257.6" width="376.19" height="104.88" rx="3.571" />
 <text x="73.81" y="277.84" class="badge" text-anchor="start"><tspan x="73.81" dy="0">ServerCore</tspan></text>
@@ -63,24 +59,20 @@ text{font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;fill:#30
 <text x="245.238" y="491.28" class="name" text-anchor="middle"><tspan x="245.238" dy="0">SocketHeartBeat</tspan></text>
 <text x="245.238" y="517.04" class="body" text-anchor="middle"><tspan x="245.238" dy="0">로그인 제한 · Ping/Pong 감시</tspan></text>
 </g>
-<g data-node="GameSession">
+<g data-node="GameSession" data-object="S1">
 <rect class="node" x="566.667" y="444.36" width="376.19" height="104.88" rx="3.571" />
 <text x="583.333" y="464.6" class="badge" text-anchor="start"><tspan x="583.333" dy="0">GameServer</tspan></text>
 <text x="754.762" y="491.28" class="name" text-anchor="middle"><tspan x="754.762" dy="0">GameSession : Session</tspan></text>
 <text x="754.762" y="517.04" class="body" text-anchor="middle"><tspan x="754.762" dy="0">로그인 사용자 · HeroManager</tspan></text>
 </g>
-<g data-node="Session">
-<rect class="node" x="304.762" y="615.48" width="390.476" height="103.04" rx="3.571" />
-<text x="321.429" y="635.72" class="badge" text-anchor="start"><tspan x="321.429" dy="0">ServerCore</tspan></text>
-<text x="500" y="662.4" class="name" text-anchor="middle"><tspan x="500" dy="0">Session</tspan></text>
-<text x="500" y="688.16" class="body" text-anchor="middle"><tspan x="500" dy="0">수신 · 패킷 조립</tspan><tspan x="500" dy="23.92">작업 큐 · 송신</tspan></text>
+<g data-node="Session" data-object="S1">
+<rect class="node" x="566.667" y="615.48" width="376.19" height="103.04" rx="3.571" />
+<text x="583.334" y="635.72" class="badge" text-anchor="start"><tspan x="583.334" dy="0">ServerCore</tspan></text>
+<text x="754.762" y="662.4" class="name" text-anchor="middle"><tspan x="754.762" dy="0">Session</tspan></text>
+<text x="754.762" y="688.16" class="body" text-anchor="middle"><tspan x="754.762" dy="0">수신 · 패킷 조립</tspan><tspan x="754.762" dy="23.92">작업 큐 · 송신</tspan></text>
 </g>
-<path class="edge" d="M 500 718.52 V 878.6" stroke-dasharray="3 4" />
-<g data-node="SessionRef">
-<rect class="node" x="304.762" y="878.6" width="390.476" height="64.4" rx="41.667" />
-<text x="500" y="906.2" class="name" text-anchor="middle"><tspan x="500" dy="0">Session 참조</tspan></text>
-<text x="500" y="931.96" class="body" text-anchor="middle"><tspan x="500" dy="0">위와 같은 연결 객체</tspan></text>
-</g>
+<g data-reference="S1">
+<rect x="304.762" y="878.6" width="390.476" height="64.4" rx="4" fill="#f8f9fa" stroke="#9aa2aa" stroke-dasharray="4 3" /><text x="500" y="905" class="name" text-anchor="middle"><tspan x="500" dy="0">S1 · 같은 세션의 패킷 처리</tspan></text><text x="500" y="930" class="badge" text-anchor="middle"><tspan x="500" dy="0">새 객체가 아닌 참조 표식</tspan></text></g>
 <path data-from="Session" data-to="Handler" class="edge" d="M 345.238 943 V 969.68 H 211.905 V 1001.88" marker-end="url(#arrow)" />
 <rect x="105.952" y="938.4" width="130.952" height="47.84" fill="#fff" />
 <text x="171.429" y="954.96" class="edge-label" text-anchor="middle"><tspan x="171.429" dy="0">완성된 패킷</tspan><tspan x="171.429" dy="22.08">전달</tspan></text>
@@ -135,8 +127,8 @@ text{font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;fill:#30
 <text x="754.762" y="1374.48" class="name" text-anchor="middle"><tspan x="754.762" dy="0">RedisMatchmakingStore</tspan></text>
 <text x="754.762" y="1400.24" class="body" text-anchor="middle"><tspan x="754.762" dy="0">티켓 등록 · Lua 확인/삭제</tspan></text>
 </g>
-<path data-from="Repo" data-to="DB" class="edge" d="M 245.238 1432.44 V 1471.08 H 19.048 V 1626.56 H 57.143" marker-end="url(#arrow)" />
-<path data-from="Store" data-to="Redis" class="edge" d="M 754.762 1432.44 V 1471.08 H 980.952 V 1803.2 H 942.857" marker-end="url(#arrow)" />
+<path data-from="Repo" data-to="DB" class="edge" d="M245.238 1432.44 V1577.8" marker-end="url(#arrow)" />
+<path data-from="Store" data-to="Redis" class="edge" d="M754.762 1432.44 V1577.8" marker-end="url(#arrow)" />
 <path data-from="DB" data-to="MySQL" class="edge" d="M 245.238 1701.08 V 1757.2" marker-end="url(#arrow)" />
 <g data-node="DB">
 <rect class="node" x="57.143" y="1577.8" width="376.19" height="123.28" rx="3.571" />
@@ -151,10 +143,10 @@ text{font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;fill:#30
 <text x="245.238" y="1807.8" class="name" text-anchor="middle"><tspan x="245.238" dy="0">MySQL</tspan></text>
 <text x="245.238" y="1834.48" class="body" text-anchor="middle"><tspan x="245.238" dy="0">사용자 · Hero</tspan></text>
 </g>
-<g data-node="Redis">
+<g data-node="Redis" transform="translate(0 -179.4)">
 <path class="node" d="M 566.667 1771.92 C 566.667 1752.6 942.857 1752.6 942.857 1771.92 L 942.857 1834.48 C 942.857 1853.8 566.667 1853.8 566.667 1834.48 Z" />
 <path d="M 566.667 1771.92 C 566.667 1791.24 942.857 1791.24 942.857 1771.92" fill="none" stroke="#9aa2aa" />
 <text x="754.762" y="1807.8" class="name" text-anchor="middle"><tspan x="754.762" dy="0">Redis</tspan></text>
 <text x="754.762" y="1834.48" class="body" text-anchor="middle"><tspan x="754.762" dy="0">매칭 티켓</tspan></text>
 </g>
-</svg>
+<g data-port="TCP-A"><circle cx="230" cy="115" r="18" fill="#fff" stroke="#7f8993" stroke-width="1.2" /><text x="230" y="122" class="name" text-anchor="middle"><tspan x="230" dy="0">A</tspan></text><text x="185" y="122" class="edge-label" text-anchor="end"><tspan x="185" dy="0">TCP</tspan></text></g><g data-port="TCP-A"><circle cx="460" cy="686" r="18" fill="#fff" stroke="#7f8993" stroke-width="1.2" /><text x="460" y="693" class="name" text-anchor="middle"><tspan x="460" dy="0">A</tspan></text><text x="415" y="693" class="edge-label" text-anchor="end"><tspan x="415" dy="0">TCP</tspan></text></g></svg>

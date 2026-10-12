@@ -1,6 +1,6 @@
 # 도식 편집 원본
 
-전체 구성도는 본문 폭에서 읽을 수 있도록 [overview.svg](overview.svg)에 1000px 너비의 고정 배치를 적용했습니다. 아래 전체 구성도 Mermaid는 구성 요소와 연결 관계의 명세이며, 자동 배치 결과는 본문의 SVG 배치와 다릅니다. SVG의 `data-node`, `data-from`, `data-to` 속성으로 관계를 확인할 수 있습니다.
+전체 구성도는 본문 폭에서 읽을 수 있도록 [overview.svg](overview.svg)에 1000px 너비의 고정 배치를 적용했습니다. 아래 전체 구성도 Mermaid는 구성 요소와 연결 관계의 명세이며, 자동 배치 결과는 본문의 SVG 배치와 다릅니다. SVG의 `data-node`, `data-from`, `data-to` 속성으로 관계를 확인할 수 있습니다. `data-object="S1"`은 동일 인스턴스의 경계이며, `data-reference="S1"`은 아래 구역의 참조 표식입니다. 두 `data-port="TCP-A"` 표식은 같은 TCP 연결의 이어지는 지점입니다.
 
 나머지 7개 호출 흐름도는 아래 Mermaid 원본을 Mermaid 11.4.1과 맑은 고딕으로 렌더링한 SVG입니다. 도식을 수정하면 대응 SVG도 함께 수정·생성하고 글자와 여백을 확인합니다. 코드 블록은 편집용이며 본문 표시에는 영향을 주지 않습니다.
 
@@ -8,7 +8,7 @@
 
 ## 서버 전체 구성
 
-전체 구성도는 15개 구성 요소와 18개 관계를 유지합니다. `Session 참조`는 그림을 이어 읽기 위한 동일 객체의 재표시이며, 별도 세션이 아닙니다.
+전체 구성도는 15개 구성 요소와 18개 관계를 유지합니다. GameSession과 기반 Session 기능은 하나의 S1 경계에 묶습니다. 아래 S1은 별도 노드가 아닌 참조 표식입니다. TCP는 A 표식으로 긴 우회선을 대신하고, Repository → DB Worker와 Redis 저장소 → Redis는 수직으로 연결합니다.
 
 ```text
 %%{init: {"theme": "base", "themeVariables": {"fontFamily": "Malgun Gothic", "fontSize": "16px", "primaryColor": "#fafafa", "primaryTextColor": "#30363d", "primaryBorderColor": "#8b949e", "lineColor": "#8b949e", "secondaryColor": "#f2f3f4", "tertiaryColor": "#fafafa", "textColor": "#30363d", "actorBkg": "#f6f7f8", "actorBorder": "#8b949e", "actorTextColor": "#30363d", "signalColor": "#8b949e", "signalTextColor": "#30363d", "noteBkgColor": "#f6f7f8", "noteTextColor": "#30363d", "noteBorderColor": "#8b949e", "labelBoxBkgColor": "#f6f7f8", "labelTextColor": "#30363d", "clusterBkg": "#f6f7f8", "clusterBorder": "#c5cbd1", "edgeLabelBackground": "#fafafa", "activationBkgColor": "#e6e8eb", "activationBorderColor": "#8b949e", "sequenceNumberColor": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 32, "rankSpacing": 42, "htmlLabels": false, "padding": 18, "wrappingWidth": 400}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 32, "wrap": false, "diagramMarginX": 32, "diagramMarginY": 24, "actorFontSize": 16, "noteFontSize": 16, "messageFontSize": 16}, "htmlLabels": false}}%%
