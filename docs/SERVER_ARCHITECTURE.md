@@ -57,10 +57,11 @@ flowchart TD
     Q --> W[["ProcessRecvQueueAsync<br/>등록된 작업을 하나씩 await"]]
     W --> A["GSPacketHandler.HandleAsync<br/>현재 연결 확인"]
     A --> G["GSPacket.HandleReq...<br/>게임 로직 실행"]
-    G --> O{"처리 결과"}
-    O -->|정상 또는 게임 오류 응답| S(["Session.SendPacket → Send<br/>직렬화 · 송신 버퍼 등록"])
+    G -->|핸들러 내부 · 응답이 필요한 경우| S(["Session.SendPacket → Send<br/>직렬화 · 송신 버퍼 등록"])
+    G -->|반환 또는 예외| O{"HandleAsync · 결과 확인"}
     S --> IO["SendAsync / ProcessSend<br/>부분 송신이면 남은 구간 전송"]
     O -->|false 또는 처리 예외| D["Disconnect(요청 당시 연결 ID)"]
+    O -->|true| End(["처리 완료 · 추가 종료 없음"])
     T -->|Heartbeat Pong| HB["ReceiveHeartbeatPong<br/>연결 ID · sequence · 제한 시간 확인"]
     classDef network fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
     classDef game fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
@@ -74,10 +75,10 @@ flowchart TD
     class A,G game
     class T,O decision
     class D error
-    class S terminal
+    class S,End terminal
 ```
 
-위 응답 경로는 응답을 보내는 일반 요청의 대표 흐름입니다. `true`는 오류 ACK를 포함한 처리 완료 또는 추가 처리 불필요를 뜻하며, 항상 송신했다는 뜻은 아닙니다. 예를 들어 이미 종료된 연결은 응답 없이 끝날 수 있습니다. 일반 핸들러의 파싱 실패·큐 등록 실패는 `false`로 수신 경로에 전달되어 연결 종료로 이어집니다. Pong은 게임 작업 큐에 넣지 않아 DB 작업 뒤에서 대기하지 않습니다.
+응답 등록은 `GSPacket` 핸들러 내부에서 수행하고, 반환값과 예외는 그 이후 `HandleAsync`가 확인합니다. 송신 완료는 별도 I/O 경로로 진행되므로 핸들러 반환과 완료 시점을 동일하게 보지 않습니다. `true`는 오류 ACK를 포함한 처리 완료 또는 추가 처리 불필요를 뜻하며, 항상 송신했다는 뜻은 아닙니다. 예를 들어 이미 종료된 연결은 응답 없이 끝날 수 있습니다. 일반 핸들러의 파싱 실패·큐 등록 실패는 `false`로 수신 경로에 전달되어 연결 종료로 이어집니다. Pong은 게임 작업 큐에 넣지 않아 DB 작업 뒤에서 대기하지 않습니다.
 
 코드: [Session](../Server/ServerCore/Network/Session.cs), [GSPacketHandler](../Server/GameServer/Packet/GSPacketHandler.cs), [GSPacket](../Server/GameServer/Packet/GSPacket.cs)
 
@@ -86,18 +87,18 @@ flowchart TD
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#fafafa", "primaryTextColor": "#30363d", "primaryBorderColor": "#8b949e", "lineColor": "#8b949e", "secondaryColor": "#f2f3f4", "tertiaryColor": "#fafafa", "textColor": "#30363d", "actorBkg": "#f6f7f8", "actorBorder": "#8b949e", "actorTextColor": "#30363d", "signalColor": "#8b949e", "signalTextColor": "#30363d", "noteBkgColor": "#f6f7f8", "noteTextColor": "#30363d", "noteBorderColor": "#8b949e", "labelBoxBkgColor": "#f6f7f8", "labelTextColor": "#30363d", "clusterBkg": "#f6f7f8", "clusterBorder": "#c5cbd1", "edgeLabelBackground": "#fafafa", "activationBkgColor": "#e6e8eb", "activationBorderColor": "#8b949e", "sequenceNumberColor": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
 flowchart TD
-    P[["GSPacket.HandleReqLogin"]] --> Input{"데모 로그인 입력이 유효한가?"}
-    Input -->|아니오| Error[["현재 연결이면 실패 ACK"]]
-    Input -->|예| User[["LoginDB.FindAsync<br/>DB Worker를 통해 사용자 조회"]]
+    P["GSPacket.HandleReqLogin"] --> Input{"데모 로그인 입력이 유효한가?"}
+    Input -->|아니오| Error["현재 연결이면 실패 ACK"]
+    Input -->|예| User["LoginDB.FindAsync<br/>DB Worker를 통해 사용자 조회"]
     User --> Exists{"사용자가 있는가?"}
     Exists -->|아니오| Error
-    Exists -->|예| Hero[["HeroDB.LoadAsync<br/>DB Worker를 통해 Hero 목록 조회"]]
+    Exists -->|예| Hero["HeroDB.LoadAsync<br/>DB Worker를 통해 Hero 목록 조회"]
     Hero --> Current{"현재 연결인가?"}
     Current -->|아니오| Skip(["상태 반영 · 응답 생략"])
-    Current -->|예| Login[["GameSession.Login<br/>UserSessions.TryLogin으로 중복 등록 방지"]]
+    Current -->|예| Login["GameSession.Login<br/>UserSessions.TryLogin으로 중복 등록 방지"]
     Login --> Success{"로그인 등록 성공?"}
     Success -->|아니오| Error
-    Success -->|예| Load[["Heroes.Load → MarkLoginCompleted"]]
+    Success -->|예| Load["Heroes.Load → MarkLoginCompleted"]
     Load --> Ack(["현재 연결 재확인 → 성공 ACK"])
     classDef network fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
     classDef game fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
@@ -114,7 +115,7 @@ flowchart TD
 ```
 
 
-일반적인 입력·조회·로그인 등록 분기를 표시했습니다. 로그인 데이터 오류는 연결 종료로, 일반 조회 예외는 로그인 실패 응답으로 이어집니다. 사용자가 없으면 Hero 조회는 하지 않습니다. 이후 Hero 목록 요청은 로그인 시 읽은 메모리 상태를 조회하며 매번 MySQL에 접근하지 않습니다.
+일반적인 입력·조회·로그인 등록 분기를 표시했습니다. `MarkLoginCompleted`에서도 접속 후 30초 제한을 검사하며, 초과하면 연결을 종료해 성공 ACK를 보내지 않습니다. 로그인 데이터 오류는 연결 종료로, 일반 조회 예외는 로그인 실패 응답으로 이어집니다. 사용자가 없으면 Hero 조회는 하지 않습니다. 이후 Hero 목록 요청은 로그인 시 읽은 메모리 상태를 조회하며 매번 MySQL에 접근하지 않습니다.
 
 코드: [GSPacket.HandleReqLogin](../Server/GameServer/Packet/GSPacket.cs), [LoginDB](../Server/GameServer/DataBase/DBRepository/LoginDB.cs), [HeroDB](../Server/GameServer/DataBase/DBRepository/HeroDB.cs)
 
@@ -162,20 +163,20 @@ sequenceDiagram
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#fafafa", "primaryTextColor": "#30363d", "primaryBorderColor": "#8b949e", "lineColor": "#8b949e", "secondaryColor": "#f2f3f4", "tertiaryColor": "#fafafa", "textColor": "#30363d", "actorBkg": "#f6f7f8", "actorBorder": "#8b949e", "actorTextColor": "#30363d", "signalColor": "#8b949e", "signalTextColor": "#30363d", "noteBkgColor": "#f6f7f8", "noteTextColor": "#30363d", "noteBorderColor": "#8b949e", "labelBoxBkgColor": "#f6f7f8", "labelTextColor": "#30363d", "clusterBkg": "#f6f7f8", "clusterBorder": "#c5cbd1", "edgeLabelBackground": "#fafafa", "activationBkgColor": "#e6e8eb", "activationBorderColor": "#8b949e", "sequenceNumberColor": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
 flowchart TD
-    J(["GSPacket.HandleReqPvpMatchPending"]) --> M(["MatchManager.JoinAsync<br/>gate 획득 · 연결/중복 검사"])
-    M --> R(["RedisMatchmakingStore.AddAsync<br/>티켓 SET NX · TTL 120초"])
-    R --> P(["연결 재확인 → 메모리 pending 등록<br/>Pending ACK 반환"])
-    P -.-> T(["별도 매칭 작업자: TickAsync<br/>정리 요청·만료 처리 후 후보 선택"])
-    T --> C(["RedisMatchmakingStore.ClaimAsync<br/>Lua로 두 티켓 값 확인 후 삭제"])
+    J["GSPacket.HandleReqPvpMatchPending"] --> M["MatchManager.JoinAsync<br/>gate 획득 · 연결/중복 검사"]
+    M --> R["RedisMatchmakingStore.AddAsync<br/>티켓 SET NX · TTL 120초"]
+    R --> P["연결 재확인 → 메모리 pending 등록<br/>Pending ACK 반환"]
+    P -.-> T[["별도 매칭 작업자: TickAsync<br/>정리 요청·만료 처리 후 후보 선택"]]
+    T --> C["RedisMatchmakingStore.ClaimAsync<br/>Lua로 두 티켓 값 확인 후 삭제"]
     C --> OK{"티켓 소비 성공<br/>두 연결 모두 유효?"}
-    OK -->|예| Room(["메모리 pending 제거<br/>Room · 사용자별 방 인덱스 등록"])
-    Room --> N(["GameSession.Notify(connectionId, reply)<br/>세션 작업 큐에 알림 등록"])
-    N --> S(["현재 연결 확인 → SendPacket"])
-    OK -->|아니오| Fail(["FailPair<br/>대기 해제 · 티켓 정리 예약 · 종료 알림"])
-    D(["GameSession.OnDisconnected"]) --> Schedule(["ScheduleDisconnect<br/>사용자 ID · 연결 ID만 큐에 기록"])
-    Schedule -.-> Next(["다음 TickAsync → DisconnectAsync<br/>같은 연결의 대기·방 정리"])
-    Next --> Cleanup(["FlushCleanupAsync<br/>토큰 일치 티켓 삭제 · 실패 시 재시도"])
-    Next --> Notify(["상대 연결이 유효하면 종료 알림"])
+    OK -->|예| Room["메모리 pending 제거<br/>Room · 사용자별 방 인덱스 등록"]
+    Room --> N["GameSession.Notify(connectionId, reply)<br/>세션 작업 큐에 알림 등록"]
+    N --> S["현재 연결 확인 → SendPacket"]
+    OK -->|아니오| Fail["FailPair<br/>대기 해제 · 티켓 정리 예약 · 종료 알림"]
+    D["GameSession.OnDisconnected"] --> Schedule[["ScheduleDisconnect<br/>사용자 ID · 연결 ID만 큐에 기록"]]
+    Schedule -.-> Next["다음 TickAsync → DisconnectAsync<br/>같은 연결의 대기·방 정리"]
+    Next --> Cleanup["FlushCleanupAsync<br/>토큰 일치 티켓 삭제 · 실패 시 재시도"]
+    Next --> Notify["상대 연결이 유효하면 종료 알림"]
     classDef network fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
     classDef game fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
     classDef storage fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
@@ -192,6 +193,8 @@ flowchart TD
 
 `JoinAsync`는 대기 등록을 수행하고 실제 짝짓기는 별도 `TickAsync`에서 합니다. 매칭 작업자는 Tick 완료 후 100ms 대기하므로 정확히 100ms마다 완료되는 타이머가 아닙니다. 참가 실패 경로는 중복/연결 오류 또는 저장소 오류 결과를 반환하며, Redis 등록 결과가 불명확하면 티켓을 정리 대상으로 남깁니다.
 
+`Pending ACK` 전송이 Tick 실행을 시작시키는 것은 아닙니다. 점선은 등록된 대기 상태를 별도 작업자가 소비한다는 관계입니다.
+
 참가·취소·퇴장·매칭·정리는 `_gate`로 직렬화합니다. `ScheduleDisconnect`는 정리 예약이며 Redis 작업 완료를 기다리지 않습니다. 세션 반환은 이 매칭 정리 완료에 종속되지 않고, 이전 연결 ID·토큰 검사가 뒤늦은 정리를 보호합니다. 게임 상태는 메모리, 티켓은 Redis에 있다는 책임 분리가 중요합니다.
 
 코드: [MatchManager](../Server/GameServer/Matchmaking/MatchManager.cs), [RedisMatchmakingStore](../Server/GameServer/Matchmaking/RedisMatchmakingStore.cs), [GameSession](../Server/GameServer/Sessions/GameSession.cs)
@@ -203,7 +206,7 @@ flowchart TD
 flowchart TD
     D["Session.Disconnect(connectionId)<br/>현재 연결 확인 · 종료 표시 · 소켓 닫기"]
     D --> Hook["GameSession.OnDisconnected<br/>매칭 정리 요청 예약"]
-    Hook --> Check{"TryRelease<br/>종료 처리 중 아님 + 수신/송신/작업 pending 모두 0?"}
+    Hook --> Check{"TryRelease<br/>종료 요청 있음 · 종료 훅 완료<br/>수신/송신/작업 pending 모두 0?"}
     Check -->|아니오| Pending[["남은 I/O·작업 처리"]]
     Pending -->|완료 경로에서 재확인| Check
     Check -->|예 · 중복 반환 방지| Register[["SessionManager.ReleaseRegister<br/>반환 Channel에 Session 등록"]]
@@ -259,6 +262,8 @@ flowchart TD
     class All,Released,Channel queue
     class Stop,Done terminal
 ```
+
+위 그림은 Ctrl+C 이후의 정상 종료 경로입니다. Heartbeat 작업의 예기치 않은 종료·예외도 Program의 종료 정리로 이어집니다. 이미 큐에 있어도 아직 실행하지 않은 일반 요청은 연결 종료 후 `HandleAsync`의 연결 검사에서 생략되며, 이미 실행 중인 요청의 완료는 기다립니다.
 
 `Program.WaitForShutdownAsync`는 각 단계가 10초 이상 지속되면 경고를 반복하며 같은 작업을 계속 기다립니다. 강제 종료 시간 제한은 아닙니다. 실제 종료 오류가 발생하면 기록하고 예외를 전달하며, 이후 단계를 정상 완료한 것으로 처리하지 않습니다. Redis 티켓 삭제 실패는 매칭 정리의 재시도/TTL 정책을 따릅니다.
 
