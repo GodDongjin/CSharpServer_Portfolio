@@ -8,63 +8,13 @@ C# / .NET 10 기반 비동기 TCP 게임 서버 포트폴리오입니다. **세�
 
 전체도는 구성 요소의 주요 호출·참조 관계입니다. 실행 순서는 [주요 코드 호출 흐름](docs/SERVER_ARCHITECTURE.md)에서 별도로 설명합니다. `GameSession`은 `Session`을 상속한 동일 객체이며, 둘 사이에 데이터를 넘기는 별도 세션 계층은 없습니다.
 
+그림은 검토한 SVG로 표시합니다. 글자가 작으면 그림 아래 **확대해서 보기**를 이용하세요.
+
 **도식 표기:** 마름모는 조건, 둥근 도형은 시작·결과, 이중 테두리는 큐·작업 경계, 원통은 DB를 뜻합니다.
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#fafafa", "primaryTextColor": "#30363d", "primaryBorderColor": "#8b949e", "lineColor": "#8b949e", "secondaryColor": "#f2f3f4", "tertiaryColor": "#fafafa", "textColor": "#30363d", "actorBkg": "#f6f7f8", "actorBorder": "#8b949e", "actorTextColor": "#30363d", "signalColor": "#8b949e", "signalTextColor": "#30363d", "noteBkgColor": "#f6f7f8", "noteTextColor": "#30363d", "noteBorderColor": "#8b949e", "labelBoxBkgColor": "#f6f7f8", "labelTextColor": "#30363d", "clusterBkg": "#f6f7f8", "clusterBorder": "#c5cbd1", "edgeLabelBackground": "#fafafa", "activationBkgColor": "#e6e8eb", "activationBorderColor": "#8b949e", "sequenceNumberColor": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
-flowchart TB
-    Client(["클라이언트 / ServerSmokeTester"])
-    subgraph Core["ServerCore — 공통 서버 라이브러리"]
-        Service["Service · Listen<br/>연결 수락 · 이벤트 풀 · 서버 종료"]
-        Manager[["SessionManager<br/>세션 풀 · 활성 세션 · 반환 Channel"]]
-        Session["Session<br/>수신 · 패킷 조립 · 작업 큐 · 송신"]
-        Heartbeat["SocketHeartBeat<br/>로그인 제한 · Ping/Pong 감시"]
-        DB[["MysqlDataBase → DbWorkerPool → DbWorker<br/>DB 작업 큐 · 연결 확보 · 완료 통지"]]
-    end
-    subgraph Game["GameServer — 게임 상태와 요청 처리"]
-        GameSession["GameSession : Session<br/>로그인 사용자 · HeroManager"]
-        Handler["GSPacketHandler<br/>패킷 ID 확인 · 파싱 · 작업 등록"]
-        Packet["GSPacket<br/>로그인 · Hero · 매칭 요청 처리"]
-        Hero["HeroManager<br/>연결별 Hero 상태 · 저장 후 반영"]
-        Repo["DataBaseRepository<br/>LoginDB · HeroDB"]
-        Match["MatchManager<br/>매칭 대기 · 방 · 종료 정리"]
-        Store["RedisMatchmakingStore<br/>티켓 등록 · Lua 확인/삭제"]
-    end
-    MySQL[("MySQL<br/>사용자 · Hero")]
-    Redis[("Redis<br/>매칭 티켓")]
-    Client -->|접속| Service
-    Service -->|Listen에서 세션 할당 요청| Manager
-    Manager -->|초기화 · 반환 후 재사용| GameSession
-    GameSession -.->|상속| Session
-    Client <-->|TCP| Session
-    Heartbeat -->|활성 연결 스냅샷| Manager
-    Heartbeat -->|연결별 검사| Session
-    Session -->|완성된 패킷 전달| Handler
-    Handler -->|일반 요청을 작업 큐에 등록| Session
-    Session -->|큐에서 게임 핸들러 실행| Packet
-    Packet --> Hero
-    Packet -->|로그인 조회| Repo
-    Hero -->|DB 저장 요청| Repo
-    Repo --> DB
-    DB --> MySQL
-    Packet --> Match
-    Match --> Store
-    Store --> Redis
-    classDef network fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
-    classDef game fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
-    classDef storage fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
-    classDef queue fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
-    classDef decision fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
-    classDef error fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
-    classDef terminal fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
-    class Service,Session,Heartbeat network
-    class GameSession,Handler,Packet,Hero,Match game
-    class Repo,Store,MySQL,Redis storage
-    class Manager,DB queue
-    class Client terminal
-    style Core fill:#f6f7f8,stroke:#c5cbd1,stroke-width:1px,color:#30363d
-    style Game fill:#f6f7f8,stroke:#c5cbd1,stroke-width:1px,color:#30363d
-```
+![서버 전체 구성](docs/diagrams/overview.svg)
+
+[확대해서 보기](docs/diagrams/overview.svg) · [편집 원본](docs/diagrams/SOURCES.md#overview)
 
 `Program`이 DB·Redis 연결, 게임 서비스, 패킷 처리기와 세션 풀을 구성합니다. `Service`는 네트워크 수명과 이벤트 풀을 관리하고, `SessionManager`는 세션의 할당과 반환을 담당합니다. Redis 연결은 `RedisManager`가 준비하여 `RedisMatchmakingStore`에 전달합니다. 매칭 대기·방 상태는 GameServer 메모리에 있으며 Redis에는 티켓을 저장합니다.
 
