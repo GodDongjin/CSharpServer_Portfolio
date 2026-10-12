@@ -4,18 +4,18 @@ C# / .NET 기반 비동기 TCP 게임 서버 개인 포트폴리오입니다. �
 
 ## 핵심 설계
 
-비동기 서버에서 **요청의 실행 순서, 연결별 상태의 소유권, 저장·정리의 완료 시점**을 명확히 하는 데 집중했습니다.
+**ServerCore는 공통 서버 기반을, GameServer는 게임 상태와 규칙을 담당합니다.** 네트워크 I/O, 세션별 게임 처리, DB 작업의 실행 단위를 구분하고 각 상태의 소유 위치와 자원 반환 시점을 정했습니다.
 
-| 해결할 문제 | 설계 선택 |
+| 설계 영역 | 구성과 동작 |
 |---|---|
-| 연결 종료 뒤 도착한 완료 처리가 재사용된 세션에 영향을 주는 문제 | **연결 ID 검사 + 반환 조건 분리**: I/O·세션 작업·종료 훅이 끝나고 이벤트 객체까지 반환한 뒤 재사용 |
-| DB를 기다리는 동안 같은 사용자의 후속 요청이 앞서는 문제 | **세션별 비동기 큐 + 사용자별 DB Worker 배정**: 세션 안에서는 완료 순서를 유지하고, DB는 같은 사용자를 같은 Worker로 분배 |
-| TCP 부분 송수신과 느린 클라이언트로 인한 버퍼 누적 | **패킷 경계 복원 + 잔여 구간 송신 + 자원 상한**: 세션 대기 작업 30개, 송신 버퍼 용량 1MiB 제한 |
-| DB 저장 실패에도 메모리만 변경되거나 저장 결과가 불명확한 문제 | **DB 커밋 후 메모리 반영**: 성공 응답의 기준을 커밋에 두고, 결과가 불명확하면 연결 종료 후 DB 재조회 |
-| 매칭 취소·성립·재접속 정리가 서로 충돌하는 문제 | **상태 변경 직렬화 + Redis 토큰 검증**: 이전 티켓 정리는 새 티켓에 적용하지 않고, 두 티켓 확보 후 연결을 재확인 |
-| DB 대기로 Pong 처리가 늦거나 종료 중 저장 자원이 먼저 해제되는 문제 | **Pong 별도 처리 + 의존 순서에 따른 종료**: 연결 생존 확인과 게임 작업을 분리하고, 진행 중 작업 완료 후 저장소 해제 |
+| **계층과 의존 관계** | GameServer가 ServerCore를 참조합니다. 통신·세션·저장소 실행 기반은 코어에, 패킷별 게임 처리·Hero·매칭·Repository는 게임 서버에 둡니다. |
+| **비동기 TCP 통신** | `SocketAsyncEventArgs`와 이벤트 객체 풀을 사용합니다. 길이 헤더로 패킷을 구분하고, 수신 버퍼와 송신 구간을 관리합니다. |
+| **세션 실행 모델과 수명** | 세션별 비동기 큐가 게임 요청을 순차 실행합니다. 연결 ID로 상태를 구분하고 I/O·작업·정리가 완료된 세션을 풀에서 재사용합니다. |
+| **데이터 접근과 상태 반영** | 사용자 ID로 DB Worker를 배정합니다. MySQL을 영속 데이터의 기준으로 삼고, 커밋된 Hero를 현재 연결의 메모리에 반영합니다. |
+| **매칭 상태와 저장소 역할** | MatchManager가 대기열·방을 메모리에서 관리합니다. 상태 변경은 직렬화하고 Redis에는 연결별 매칭 티켓을 보관합니다. |
+| **연결 감시와 서버 종료** | 단일 Heartbeat 작업자가 연결을 검사합니다. 종료 시 세션·매칭·DB·Redis의 의존 순서에 따라 작업 완료와 자원 해제를 기다립니다. |
 
-[설계 상세와 검증 근거](#핵심-설계-상세) · [서버 전체 구성](#서버-전체-구성) · [실행 방법](#실행-방법)
+[설계 상세](#핵심-설계-상세) · [서버 전체 구성](#서버-전체-구성) · [실행 방법](#실행-방법)
 
 ## 검증 결과
 
@@ -53,89 +53,84 @@ C# / .NET 기반 비동기 TCP 게임 서버 개인 포트폴리오입니다. �
 
 ## 핵심 설계 상세
 
-### 1. 연결 종료와 세션 재사용 시점을 분리
+### 1. ServerCore와 GameServer의 책임 분리
 
-소켓을 닫아도 이미 시작한 I/O와 DB 작업의 완료 처리는 나중에 도착할 수 있습니다. 세션 객체를 먼저 풀에 돌려주면 이전 연결의 완료 처리가 새 연결의 상태를 변경하거나 연결을 종료할 수 있습니다.
+서버는 하나의 프로세스에서 실행되며, **GameServer → ServerCore** 방향으로 프로젝트를 참조합니다. 공통 실행 기반과 게임 도메인의 경계를 프로젝트 수준에서 나눴습니다.
 
-- **연결의 신원:** 비동기 작업과 외부 알림에 요청 당시 연결 ID를 전달합니다. 작업 등록과 종료 요청은 수명 잠금 안에서 ID를 검사하여, 같은 객체를 사용하는 다음 연결과 구분합니다.
-- **반환 조건:** 종료 훅이 끝나고 수신·송신 I/O와 세션 큐 작업이 모두 끝나야 반환을 한 번만 등록합니다. 잠금은 이 조건 검사와 상태 전이를 보호하며, DB를 기다리는 동안 유지하지 않습니다.
-- **반환 순서:** `Channel<Session>`의 단일 작업자가 `Reset → SocketAsyncEventArgs 풀 반환·참조 해제 → 세션 풀 반환`을 수행합니다. 정리에 실패한 세션은 재사용하지 않고 종료 대기에 오류를 전달합니다.
+- **ServerCore:** 연결 수락, TCP 송수신, 패킷 경계 처리, 세션 큐·풀, Heartbeat, DB Worker와 Redis 연결을 담당합니다.
+- **GameServer:** 패킷별 게임 핸들러, 로그인 사용자, Hero 상태, 매칭 규칙, 게임 데이터의 SQL과 Repository를 담당합니다.
+- **연결 지점:** `GameSession`은 `Session`을 상속해 사용자·Hero 상태와 종료 동작을 확장합니다. 코어는 `IPacketHandler`를 통해 패킷을 전달하고, `Program`이 Repository·MatchManager·패킷 핸들러·Service를 구성해 연결합니다.
 
-**선택의 대가:** 연결이 끊겨도 진행 중 작업이 끝나기 전까지 세션 슬롯을 점유합니다. 강제 초기화로 슬롯을 빨리 회수하면 이전 작업과 새 연결을 다시 겹치게 만들 수 있으므로 실제 완료를 기다립니다.
+게임 데이터의 의미와 처리 규칙은 GameServer에 두고, 코어의 통신·작업 실행 기능을 사용하도록 구성했습니다.
 
-**검증:** [수명 테스트](Server/ServerCore.Tests/SessionLifecycleTests.cs)는 실행 중 작업·종료 훅이 반환을 지연하는지, 중복 종료가 한 번만 반환되는지, 이전 연결 ID가 거부되는지 검사합니다. [반환 순서 테스트](Server/ServerCore.Tests/SessionManagerTests.cs)는 이벤트 반환을 지연시켜 세션이 먼저 재사용되지 않는지 확인합니다.
+구현: [GameSession](Server/GameServer/Sessions/GameSession.cs), [IPacketHandler](Server/ServerCore/Interface/IPacketHandler.cs), [Service](Server/ServerCore/Network/Service.cs), [Program](Server/GameServer/Program.cs)
 
-구현: [Session](Server/ServerCore/Network/Session.cs), [SessionManager](Server/ServerCore/Network/SessionManager.cs) · [수정 기록](docs/SESSION_LIFETIME_REVIEW.md)
+### 2. SocketAsyncEventArgs 기반 TCP 통신과 버퍼 관리
 
-### 2. 세션과 DB의 작업 순서를 각각 관리
+`Service`가 수신·송신용 `SocketAsyncEventArgs` 풀을 보유하고, `Session`이 연결별 비동기 I/O와 버퍼 상태를 관리합니다. 패킷은 **길이·ID 헤더와 protobuf 본문**으로 구성합니다.
 
-Hero 변경 직후 목록을 요청했을 때, 변경 요청의 DB 대기 중 목록 요청이 먼저 실행되면 이전 상태를 응답할 수 있습니다. 한편 한 연결의 대기 때문에 모든 연결의 게임 처리가 멈춰서도 안 됩니다.
+- **수신:** 길이 헤더로 완성된 패킷을 구분합니다. 미완성 데이터는 다음 수신까지 보존하고, 한 번에 여러 패킷이 들어오면 차례로 분리합니다. protobuf는 수신 버퍼가 유효한 동안 파싱해 게임 작업 큐로 전달합니다.
+- **송신:** 대기 버퍼들을 `BufferList`로 묶어 전송합니다. 부분 송신 시 실제 전송량만큼 구간을 이동하고 나머지를 이어 보내며, 각 버퍼의 전송이 끝나면 반환합니다.
+- **자원 한도:** 세션별 대기 작업은 30개, 대기·진행 중 송신 버퍼의 할당 용량 합계는 1MiB로 제한합니다. 한도 초과는 게임 패킷 처리 경로에서 연결 종료로 이어집니다.
 
-- **세션 안의 순서:** 수신 버퍼가 유효할 때 protobuf를 파싱하고, 게임 처리는 세션별 비동기 큐에 등록합니다. 한 작업의 `await`가 끝난 뒤 다음 작업을 실행하므로, DB 대기를 포함한 요청 순서를 유지합니다.
-- **세션 사이의 실행:** 각 세션은 독립된 큐 소비 작업을 사용합니다. 게임 핸들러는 소켓 I/O 콜백에서 직접 실행하지 않으며, 한 세션이 기다리는 동안 다른 세션의 큐는 진행할 수 있습니다.
-- **DB 실행 경계:** `userId % WorkerCount`로 DB Worker를 선택합니다. 같은 사용자의 DB 작업은 같은 Worker에서 등록 순서대로 실행하고, 서로 다른 Worker는 독립적으로 실행합니다.
+수신 데이터의 소비 위치, 송신 데이터의 완료 위치, 버퍼를 반환할 수 있는 시점을 각각 관리합니다. 한도는 현재 구현의 정책값이며 부하 특성에 따른 조정 대상입니다.
 
-**선택의 대가:** 같은 세션의 후속 요청은 앞선 DB 작업을 기다립니다. 다른 사용자라도 같은 DB Worker에 배정되면 서로 대기하므로, 이 구조가 사용자별 DB 지연 격리까지 보장하지는 않습니다.
+구현: [Session](Server/ServerCore/Network/Session.cs), [Service](Server/ServerCore/Network/Service.cs), [GSPacketHandler](Server/GameServer/Packet/GSPacketHandler.cs)  
+관련 검증: [버퍼·패킷 테스트](Server/ServerCore.Tests/BufferAndPacketTests.cs), [송신 제한·부분 송신 테스트](Server/ServerCore.Tests/SessionSendLimitTests.cs)
 
-**검증:** [세션 큐 테스트](Server/ServerCore.Tests/SessionQueueTests.cs)에서 첫 작업을 의도적으로 멈춘 뒤 같은 세션의 후속 작업은 대기하고, 다른 세션의 작업은 완료되는지 검사합니다. 이 테스트의 범위는 세션 큐이며 실제 DB Worker의 장애·편중 부하 검증과는 구분합니다.
+### 3. 세션별 순차 실행과 연결 수명 관리
 
-구현: [GSPacketHandler](Server/GameServer/Packet/GSPacketHandler.cs), [Session](Server/ServerCore/Network/Session.cs), [DbWorkerPool·DbWorker](Server/ServerCore/DataBase/DataBaseWorker.cs)
+**세션을 게임 요청의 실행 단위**로 사용합니다. 각 세션은 비동기 작업 큐를 가지며, 세션 객체의 재사용과 개별 연결의 수명은 연결 ID로 구분합니다.
 
-### 3. TCP의 부분 완료와 자원 누적을 명시적으로 처리
+- **게임 작업 실행:** 같은 세션에서는 앞선 작업의 `await`가 끝난 뒤 다음 작업을 실행합니다. 서로 다른 세션은 독립된 큐 소비 작업으로 진행하며, 게임 핸들러는 소켓 I/O 콜백 밖에서 실행합니다.
+- **연결 식별:** 작업 등록·외부 알림·종료 요청에는 요청 당시 연결 ID를 사용합니다. ID 검사와 수명 상태 전이는 잠금으로 보호하고, DB를 기다리는 동안에는 해당 잠금을 유지하지 않습니다.
+- **풀 반환:** 연결 종료 후 종료 훅, 수신·송신 I/O, 세션 큐 작업의 완료를 확인합니다. 이후 `Channel<Session>`의 단일 반환 작업자가 `Reset → 이벤트 객체 반환·참조 해제 → 세션 풀 반환`을 수행합니다.
 
-TCP 수신 한 번이 패킷 하나와 일치하지 않으며, 송신 완료도 요청한 전체 바이트의 전송을 뜻하지 않습니다. 요청을 빠르게 보내거나 응답을 느리게 읽는 연결에는 작업과 버퍼가 계속 쌓일 수 있습니다.
+이 모델에서 같은 세션의 후속 요청은 진행 중인 DB 작업을 기다립니다. 연결이 끊긴 뒤에도 작업과 정리가 완료될 때까지 해당 세션 슬롯을 유지합니다.
 
-- **수신 경계:** 길이 헤더를 기준으로 완성된 패킷만 처리합니다. 미완성 데이터는 다음 수신까지 보존하고, 한 번에 도착한 여러 패킷은 차례로 분리합니다.
-- **부분 송신:** 실제 전송된 바이트만큼 구간을 이동하고 남은 데이터를 이어 보냅니다. 버퍼 전체의 전송이 끝난 뒤에만 반환합니다.
-- **자원 상한:** 세션 큐의 대기 작업은 30개로 제한합니다. 송신은 대기 중·진행 중 버퍼의 **할당 용량 합계**를 1MiB로 제한하며, 두 한도 초과는 패킷 처리 경로에서 연결 종료로 이어집니다. DB Worker도 실행 중 작업을 포함해 각각 10,000개까지만 받아 초과 등록을 실패시킵니다.
+구현: [Session](Server/ServerCore/Network/Session.cs), [SessionManager](Server/ServerCore/Network/SessionManager.cs)  
+관련 검증: [세션 큐 테스트](Server/ServerCore.Tests/SessionQueueTests.cs), [수명 테스트](Server/ServerCore.Tests/SessionLifecycleTests.cs), [반환 순서 테스트](Server/ServerCore.Tests/SessionManagerTests.cs)
 
-**선택의 대가:** 초과 요청을 계속 쌓아 두지 않으므로 순간적인 과부하에서도 요청 실패나 연결 종료가 발생할 수 있습니다. 위 수치는 현재 구현의 상한이며 최적 용량을 뜻하지 않습니다.
+### 4. 사용자별 DB 작업 분배와 Hero 상태 관리
 
-**검증:** [세션 큐 테스트](Server/ServerCore.Tests/SessionQueueTests.cs)는 대기 30개 허용·다음 작업 거부·큐 회복을 검사합니다. [송신 제한 테스트](Server/ServerCore.Tests/SessionSendLimitTests.cs)는 대기·진행 중 용량 합산, 정확한 경계값, 부분 송신의 잔여 데이터와 버퍼 반환을 검사합니다.
+DB 접근은 **게임별 Repository → MysqlDataBase → DbWorkerPool**로 이어집니다. SQL과 데이터 변환은 GameServer가 담당하고, 작업 분배·실행·연결 관리는 ServerCore가 담당합니다.
 
-구현: [Session](Server/ServerCore/Network/Session.cs), [DbWorker](Server/ServerCore/DataBase/DataBaseWorker.cs)
+- **작업 분배:** `userId % WorkerCount`로 Worker를 선택합니다. 같은 사용자의 DB 작업은 같은 Worker에서 등록 순서대로 실행하며, 서로 다른 Worker는 독립적으로 실행합니다. Worker별로 실행 중 작업을 포함해 10,000개까지 받습니다.
+- **상태 소유:** MySQL에 사용자·Hero를 영속 저장합니다. 로그인 시 읽은 Hero는 `GameSession.Heroes`가 현재 연결 동안 보관하고, 목록 요청은 이 메모리를 조회합니다.
+- **변경 반영:** `HeroDB`가 트랜잭션 안에서 갱신·재조회 후 커밋합니다. `HeroManager`는 요청 당시 연결이 유효한지 확인한 뒤 저장된 스냅샷으로 메모리를 교체하고 응답합니다.
 
-### 4. Hero 저장의 성공 기준을 DB 커밋에 둠
+같은 Worker에 배정된 다른 사용자의 DB 작업도 순차 실행됩니다. Hero 캐시는 연결 전용이며, 저장 결과가 불명확한 예외에서는 연결을 종료하고 재로그인 시 DB를 다시 읽습니다.
 
-메모리를 먼저 바꾸면 DB 저장 실패 시 서버가 응답하는 상태와 영속 데이터가 달라집니다. 반대로 커밋 응답이 유실되면 서버가 예외를 받아도 DB에는 이미 반영되었을 수 있습니다.
+구현: [DbWorkerPool·DbWorker](Server/ServerCore/DataBase/DataBaseWorker.cs), [HeroDB](Server/GameServer/DataBase/DBRepository/HeroDB.cs), [HeroManager](Server/GameServer/Hero/HeroManager.cs)  
+관련 검증: [Hero 저장소 대역 테스트](Server/GameServer.Tests/HeroAndMatchTests.cs), [실제 MySQL 저장·재로그인 검증](docs/PORTFOLIO_REVIEW.md)
 
-- **조회와 저장:** 로그인 시 DB에서 읽은 Hero를 현재 연결에 보관하고 목록은 메모리에서 조회합니다. 변경은 소유권·입력을 검사한 뒤 MySQL 트랜잭션 안에서 갱신·재조회하고 커밋합니다.
-- **메모리 반영:** 저장소 호출이 성공한 후 요청 당시 연결이 유효한지 다시 확인하고, DB가 반환한 Hero 스냅샷으로 메모리를 교체한 뒤 응답합니다.
-- **불명확한 결과:** 잘못된 입력·소유권 오류는 오류 응답으로 처리합니다. 저장 예외는 해당 연결을 종료하고 재로그인 시 DB를 다시 읽도록 하여, 확인되지 않은 메모리 상태로 계속 처리하지 않습니다.
+### 5. MatchManager 중심의 매칭 상태 관리
 
-**선택의 대가:** 변경 응답에는 DB 커밋 지연이 포함되며, 결과가 불명확한 경우 클라이언트의 재로그인이 필요합니다. 캐시는 연결 전용이어서 외부 프로세스의 DB 변경을 실시간 동기화하지 않습니다.
+`MatchManager`가 **대기 사용자, 매칭 방, 사용자별 방 인덱스**를 소유합니다. 방과 대기열은 서버 메모리에 두고, Redis는 연결별 매칭 티켓을 보관하는 역할로 사용합니다.
 
-**검증:** [Hero 테스트](Server/GameServer.Tests/HeroAndMatchTests.cs)는 저장소 대역의 완료를 지연하거나 실패시켜 저장 성공 전 메모리 유지, 오류 시 기존 값 유지, 연결 무효화 후 반영 생략을 검사합니다. 실제 MySQL 저장 후 직접 조회·재로그인 확인은 [통합 검증 기록](docs/PORTFOLIO_REVIEW.md)에 있으며, 커밋 응답 유실 주입은 추가 검증 항목입니다.
+- **매칭 규칙:** 대기 시간 순으로 후보를 살펴보고, 점수 차이 1,000 이내에서 가장 가까운 상대를 선택해 1:1 방을 구성합니다.
+- **상태 변경:** 참가·취소·성립·퇴장·연결 종료를 하나의 `SemaphoreSlim`으로 직렬화합니다. 매칭 알림은 연결 ID를 포함해 대상 세션의 작업 큐로 전달합니다.
+- **Redis 연동:** 티켓에는 연결 ID와 고유 토큰을 저장합니다. Lua로 두 티켓의 값을 확인·삭제한 뒤 연결 유효성을 재확인하고 방을 만듭니다. 개별 정리도 토큰이 일치하는 티켓에 적용하며, 삭제 재시도와 120초 TTL을 사용합니다.
 
-구현: [HeroManager](Server/GameServer/Hero/HeroManager.cs), [HeroDB](Server/GameServer/DataBase/DBRepository/HeroDB.cs), [GSPacket](Server/GameServer/Packet/GSPacket.cs)
+현재 대기열과 방의 소유 범위는 단일 서버 프로세스입니다. Redis 호출은 매칭의 직렬 처리 구간에 포함되며, 취소 응답은 로컬 대기 해제를 의미합니다.
 
-### 5. 매칭 상태 전이와 Redis 티켓 소유권을 함께 확인
+구현: [MatchManager](Server/GameServer/Matchmaking/MatchManager.cs), [RedisMatchmakingStore](Server/GameServer/Matchmaking/RedisMatchmakingStore.cs), [GameSession](Server/GameServer/Sessions/GameSession.cs)  
+관련 검증: [매칭 상태·정리 재시도 테스트](Server/GameServer.Tests/HeroAndMatchTests.cs), [실제 Redis 매칭 검증](docs/PORTFOLIO_REVIEW.md)
 
-매칭 참가·취소·성립·연결 종료가 겹치면 이미 취소된 사용자를 방에 넣을 수 있습니다. 재접속 뒤에는 이전 연결의 늦은 정리가 같은 사용자 키의 새 티켓을 삭제하는 문제도 생깁니다.
+### 6. Heartbeat와 의존 순서에 따른 서버 종료
 
-- **로컬 상태 전이:** 참가·취소·성립·퇴장·연결 종료 처리를 하나의 `SemaphoreSlim`으로 직렬화합니다. 대기열·방·사용자별 방 인덱스를 같은 경계 안에서 변경합니다.
-- **티켓 소유권:** Redis 값에 연결 ID와 고유 토큰을 함께 저장합니다. Lua에서 값이 일치할 때만 삭제하고, 매칭 성립 시에는 두 티켓의 값을 함께 확인·삭제합니다. Redis 호출 후에도 두 연결이 유효한지 다시 검사한 뒤 방을 만듭니다.
-- **정리 실패:** Redis 삭제가 실패하면 정리 큐에 남겨 재시도하고, 티켓에는 120초 TTL을 둡니다. 취소 응답은 로컬 대기 해제를 뜻하며 Redis 삭제 완료까지 보장하지 않습니다.
+연결 감시는 단일 Heartbeat 작업자가 담당하고, 서버 전체의 시작·종료 순서는 `Program`이 조정합니다.
 
-**선택의 대가:** 매칭 잠금을 Redis 호출 중에도 유지하므로 Redis 지연은 다른 매칭 요청에 영향을 줍니다. 대기열과 방은 단일 프로세스가 소유하며, Redis 티켓 사용만으로 다중 서버 매칭을 구현한 것은 아닙니다.
+- **로그인·생존 확인:** 접속 후 DB 조회를 포함해 30초 안에 로그인을 완료해야 합니다. 로그인 후 Ping 간격은 10초, 유효한 Pong 대기는 30초이며, 작업자가 1초마다 `Stopwatch` 기준으로 검사합니다.
+- **Pong 처리 경로:** 게임 작업 큐를 거치지 않고 수신 경로에서 연결 ID·현재 Ping 번호·기한을 확인합니다. 게임 요청의 DB 대기와 연결 생존 확인의 실행 경로를 분리했습니다.
+- **종료 순서:** 새 연결 수락을 중단하고 `세션·반환 작업자 → 매칭 → DB Worker·DB 연결 → Redis` 순서로 완료를 기다립니다. 각 작업이 사용하는 저장소는 해당 작업이 끝난 뒤 해제합니다.
 
-**검증:** [매칭 테스트](Server/GameServer.Tests/HeroAndMatchTests.cs)는 저장소 대역으로 중복 참가·취소, 이전 연결의 종료, 티켓 확보 중 연결 종료, 정리 실패 후 재시도를 검사합니다. 실제 Redis 토큰 불일치·재시작·TTL 만료에 대한 장애 주입은 추가 검증 항목입니다.
+종료 대기가 길어지면 10초마다 경고합니다. 진행 중 저장 작업을 일괄 취소하지 않으므로 종료 시간의 상한은 없으며, 실제 정리 오류는 호출자에게 전달합니다.
 
-구현: [MatchManager](Server/GameServer/Matchmaking/MatchManager.cs), [RedisMatchmakingStore](Server/GameServer/Matchmaking/RedisMatchmakingStore.cs)
+구현: [SocketHeartBeat](Server/ServerCore/Network/SocketHeartBeat.cs), [Session](Server/ServerCore/Network/Session.cs), [Program](Server/GameServer/Program.cs)  
+관련 검증: [Heartbeat 테스트](Server/ServerCore.Tests/HeartbeatTests.cs), [종료 대기 테스트](Server/GameServer.Tests/ShutdownTests.cs)
 
-### 6. 연결 생존 확인과 저장 완료 대기를 분리
-
-Pong을 일반 게임 작업과 같은 큐에 넣으면 DB 대기 뒤에 밀려 정상 연결을 끊을 수 있습니다. 서버 종료 때 DB·Redis를 먼저 해제하면 아직 실행 중인 세션 작업과 매칭 정리가 사용할 자원을 잃습니다.
-
-- **연결 생존 확인:** 로그인은 DB 조회를 포함해 접속 후 30초 안에 완료해야 합니다. 로그인 후 Ping 간격은 10초, 유효한 Pong 대기는 30초이며, 단일 검사 작업자가 1초마다 `Stopwatch` 기준으로 확인합니다.
-- **Pong 별도 처리:** Pong은 게임 큐를 거치지 않고 수신 경로에서 연결 ID·현재 Ping 번호·기한을 확인합니다. 잘못된 번호나 중복 응답으로 기한을 연장하지 않습니다.
-- **종료의 완료 기준:** 새 연결 수락을 중단하고 `세션·반환 작업자 → 매칭 → DB Worker·DB 연결 → Redis` 순서로 기다립니다. 10초마다 경고하되 저장 작업을 일괄 취소하지 않으며, 실제 정리 오류는 호출자에게 전달합니다.
-
-**선택의 대가:** 종료 시간의 상한을 보장하지 않습니다. 연결을 끊거나 경고를 기록한 시점과 작업·자원 정리가 완료된 시점을 구분합니다.
-
-**검증:** [Heartbeat 테스트](Server/ServerCore.Tests/HeartbeatTests.cs)는 제한 시간 경계, 잘못된 Pong, 세션 재사용 후 이전 연결의 응답을 검사합니다. [종료 테스트](Server/GameServer.Tests/ShutdownTests.cs)는 경고가 종료 작업을 취소·완료시키지 않고 실제 오류가 전파되는지 검사합니다. 실제 DB 작업 진행 중 종료는 추가 통합 검증 항목입니다.
-
-구현: [SocketHeartBeat](Server/ServerCore/Network/SocketHeartBeat.cs), [Session](Server/ServerCore/Network/Session.cs), [Program](Server/GameServer/Program.cs)
+자동 테스트의 저장소 대역 검증과 실제 MySQL·Redis 통합 검증은 [검토 기록](docs/PORTFOLIO_REVIEW.md)에서 구분합니다. 실제 저장소 장애 주입·커밋 응답 유실·DB 작업 진행 중 종료는 추가 검증 범위입니다.
 
 ## 구조와 기술
 
