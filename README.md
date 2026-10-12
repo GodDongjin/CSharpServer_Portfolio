@@ -4,6 +4,53 @@ C# / .NET 10 기반 비동기 TCP 게임 서버 포트폴리오입니다. **세�
 
 회사 프로젝트를 바탕으로 공개용 범위를 축소·재구성했습니다. 아래 테스트와 개선 결과는 공개본에서 검증한 내용이며, 과거 서비스 운영 실적과 구분합니다.
 
+## 서버 전체 구성
+
+전체도는 구성 요소의 주요 호출·참조 관계입니다. 실행 순서는 [주요 코드 호출 흐름](docs/SERVER_ARCHITECTURE.md)에서 별도로 설명합니다. `GameSession`은 `Session`을 상속한 동일 객체이며, 둘 사이에 데이터를 넘기는 별도 세션 계층은 없습니다.
+
+```mermaid
+flowchart TB
+    Client["클라이언트 / ServerSmokeTester"]
+    subgraph Core["ServerCore — 공통 서버 라이브러리"]
+        Service["Service · Listen<br/>연결 수락 · 이벤트 풀 · 서버 종료"]
+        Manager["SessionManager<br/>세션 풀 · 활성 세션 · 반환 Channel"]
+        Session["Session<br/>수신 · 패킷 조립 · 작업 큐 · 송신"]
+        Heartbeat["SocketHeartBeat<br/>로그인 제한 · Ping/Pong 감시"]
+        DB["MysqlDataBase → DbWorkerPool → DbWorker<br/>DB 작업 큐 · 연결 확보 · 완료 통지"]
+    end
+    subgraph Game["GameServer — 게임 상태와 요청 처리"]
+        GameSession["GameSession : Session<br/>로그인 사용자 · HeroManager"]
+        Handler["GSPacketHandler<br/>패킷 ID 확인 · 파싱 · 작업 등록"]
+        Packet["GSPacket<br/>로그인 · Hero · 매칭 요청 처리"]
+        Hero["HeroManager<br/>연결별 Hero 상태 · 저장 후 반영"]
+        Repo["DBRepository<br/>LoginDB · HeroDB"]
+        Match["MatchManager<br/>매칭 대기 · 방 · 종료 정리"]
+        Store["RedisMatchmakingStore<br/>티켓 등록 · Lua 확인/삭제"]
+    end
+    MySQL[("MySQL<br/>사용자 · Hero")]
+    Redis[("Redis<br/>매칭 티켓")]
+    Client -->|접속| Service
+    Service -->|세션 할당 요청| Manager
+    Manager -->|초기화 · 반환 후 재사용| GameSession
+    GameSession -.->|상속| Session
+    Client <-->|TCP| Session
+    Heartbeat -->|활성 연결 스냅샷| Manager
+    Heartbeat -->|연결별 검사| Session
+    Session -->|완성된 패킷 전달| Handler
+    Handler -->|일반 요청을 작업 큐에 등록| Session
+    Session -->|큐에서 게임 핸들러 실행| Packet
+    Packet --> Hero
+    Packet -->|로그인 조회| Repo
+    Hero -->|DB 저장 요청| Repo
+    Repo --> DB
+    DB --> MySQL
+    Packet --> Match
+    Match --> Store
+    Store --> Redis
+```
+
+`Program`이 DB·Redis 연결, 게임 서비스, 패킷 처리기와 세션 풀을 구성합니다. `Service`는 네트워크 수명과 이벤트 풀을 관리하고, `SessionManager`는 세션의 할당과 반환을 담당합니다. Redis 연결은 `RedisManager`가 준비하여 `RedisMatchmakingStore`에 전달합니다. 매칭 대기·방 상태는 GameServer 메모리에 있으며 Redis에는 티켓을 저장합니다.
+
 ## 핵심 설계
 
 ### 1. 비동기 작업이 끝난 뒤 세션 재사용
