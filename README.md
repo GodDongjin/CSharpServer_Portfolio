@@ -8,10 +8,10 @@ C# / .NET 10 기반 비동기 TCP 게임 서버 포트폴리오입니다. **세�
 
 전체도는 구성 요소의 주요 호출·참조 관계입니다. 실행 순서는 [주요 코드 호출 흐름](docs/SERVER_ARCHITECTURE.md)에서 별도로 설명합니다. `GameSession`은 `Session`을 상속한 동일 객체이며, 둘 사이에 데이터를 넘기는 별도 세션 계층은 없습니다.
 
-**도식 표기:** 파랑은 네트워크, 초록은 게임 로직, 보라는 저장소, 주황은 큐·작업자, 노랑 마름모는 조건, 빨강은 실패 처리입니다. 둥근 도형은 시작·결과, 이중 테두리는 큐·작업 경계, 원통은 DB를 뜻합니다.
+**도식 표기:** 마름모는 조건, 둥근 도형은 시작·결과, 이중 테두리는 큐·작업 경계, 원통은 DB를 뜻합니다.
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#e0f2fe", "primaryTextColor": "#0f172a", "primaryBorderColor": "#0369a1", "lineColor": "#64748b", "secondaryColor": "#dcfce7", "tertiaryColor": "#f8fafc", "textColor": "#0f172a", "actorBkg": "#e0f2fe", "actorBorder": "#0369a1", "actorTextColor": "#0f172a", "signalColor": "#475569", "signalTextColor": "#0f172a", "noteBkgColor": "#fef3c7", "noteTextColor": "#0f172a", "noteBorderColor": "#a16207", "labelBoxBkgColor": "#f1f5f9", "labelTextColor": "#0f172a"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Malgun Gothic, sans-serif", "fontSize": "15px", "primaryColor": "#fafafa", "primaryTextColor": "#30363d", "primaryBorderColor": "#8b949e", "lineColor": "#8b949e", "secondaryColor": "#f2f3f4", "tertiaryColor": "#fafafa", "textColor": "#30363d", "actorBkg": "#f6f7f8", "actorBorder": "#8b949e", "actorTextColor": "#30363d", "signalColor": "#8b949e", "signalTextColor": "#30363d", "noteBkgColor": "#f6f7f8", "noteTextColor": "#30363d", "noteBorderColor": "#8b949e", "labelBoxBkgColor": "#f6f7f8", "labelTextColor": "#30363d", "clusterBkg": "#f6f7f8", "clusterBorder": "#c5cbd1", "edgeLabelBackground": "#fafafa", "activationBkgColor": "#e6e8eb", "activationBorderColor": "#8b949e", "sequenceNumberColor": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 35, "rankSpacing": 50}, "sequence": {"mirrorActors": false, "actorMargin": 35, "messageMargin": 30}}}%%
 flowchart TB
     Client(["클라이언트 / ServerSmokeTester"])
     subgraph Core["ServerCore — 공통 서버 라이브러리"]
@@ -50,20 +50,20 @@ flowchart TB
     Packet --> Match
     Match --> Store
     Store --> Redis
-    classDef network fill:#e0f2fe,stroke:#0369a1,color:#0f172a,stroke-width:1.5px
-    classDef game fill:#dcfce7,stroke:#15803d,color:#0f172a,stroke-width:1.5px
-    classDef storage fill:#ede9fe,stroke:#7c3aed,color:#0f172a,stroke-width:1.5px
-    classDef queue fill:#fff7ed,stroke:#c2410c,color:#0f172a,stroke-width:1.5px
-    classDef decision fill:#fef3c7,stroke:#a16207,color:#0f172a,stroke-width:1.5px
-    classDef error fill:#fee2e2,stroke:#b91c1c,color:#0f172a,stroke-width:1.5px
-    classDef terminal fill:#f1f5f9,stroke:#475569,color:#0f172a,stroke-width:1.5px
+    classDef network fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef game fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef storage fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef queue fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef decision fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef error fill:#fafafa,stroke:#9aa2aa,color:#30363d,stroke-width:1px
+    classDef terminal fill:#eef0f2,stroke:#9aa2aa,color:#30363d,stroke-width:1px
     class Service,Session,Heartbeat network
     class GameSession,Handler,Packet,Hero,Match game
     class Repo,Store,MySQL,Redis storage
     class Manager,DB queue
     class Client terminal
-    style Core fill:#f0f9ff,stroke:#0284c7,stroke-width:2px,color:#0c4a6e
-    style Game fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d
+    style Core fill:#f6f7f8,stroke:#c5cbd1,stroke-width:1px,color:#30363d
+    style Game fill:#f6f7f8,stroke:#c5cbd1,stroke-width:1px,color:#30363d
 ```
 
 `Program`이 DB·Redis 연결, 게임 서비스, 패킷 처리기와 세션 풀을 구성합니다. `Service`는 네트워크 수명과 이벤트 풀을 관리하고, `SessionManager`는 세션의 할당과 반환을 담당합니다. Redis 연결은 `RedisManager`가 준비하여 `RedisMatchmakingStore`에 전달합니다. 매칭 대기·방 상태는 GameServer 메모리에 있으며 Redis에는 티켓을 저장합니다.
