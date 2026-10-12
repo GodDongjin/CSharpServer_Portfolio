@@ -1,106 +1,106 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="1080" viewBox="0 0 1160 1080" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1420" viewBox="0 0 1280 1420" role="img" aria-labelledby="title desc">
 <title id="title">서버 구조도</title>
 <desc id="desc">클라이언트와 외부 저장소, 단일 GameServer 프로세스를 보여주는 구조도. 프로세스 안에서 GameServer 프로젝트는 게임 기능을 담당하고 ServerCore 라이브러리를 참조한다. ServerCore는 TCP 네트워크, 세션과 연결 관리, MySQL 작업 실행, Redis 연결 기반을 제공한다. GameSession은 Session을 상속한다. 외부 저장소는 사용자와 Hero를 보관하는 MySQL과 매칭 티켓을 보관하는 Redis다. 화살표는 프로젝트 의존, 양방향 선은 외부 통신을 뜻한다.</desc>
-<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4b6278"/></marker></defs>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#354c60"/></marker></defs>
 <style>
-text { font-family: "Malgun Gothic", "Apple SD Gothic Neo", Arial, sans-serif; fill: #22384b; }
-.title { font-size: 31px; font-weight: 700; }
-.section { font-size: 26px; font-weight: 700; }
-.name { font-size: 23px; font-weight: 700; }
-.body { font-size: 20px; }
-.small { font-size: 18px; fill: #4f6578; }
-.edge { fill: none; stroke: #4b6278; stroke-width: 2.2; }
+text { font-family: "Malgun Gothic", "Apple SD Gothic Neo", Arial, sans-serif; fill: #172534; }
+.title { font-size: 38px; font-weight: 700; }
+.section { font-size: 32px; font-weight: 700; }
+.name { font-size: 30px; font-weight: 700; }
+.body { font-size: 26px; font-weight: 400; }
+.note { font-size: 24px; fill: #263d50; }
+.edge { fill: none; stroke: #354c60; stroke-width: 2.5; }
 </style>
-<rect width="1160" height="1080" rx="16" fill="#fff"/>
+<rect width="1280" height="1420" rx="16" fill="#fff"/>
 
-<text x="32" y="48" class="title" text-anchor="start"><tspan x="32" dy="0">서버 구조도</tspan></text>
-<text x="32" y="82" class="body" text-anchor="start"><tspan x="32" dy="0">프로젝트별 책임과 외부 시스템의 연결 관계</tspan></text>
+<text x="32" y="53" class="title" text-anchor="start"><tspan x="32" dy="0">서버 구조도</tspan></text>
+<text x="32" y="96" class="body" text-anchor="start"><tspan x="32" dy="0">프로젝트별 책임과 외부 시스템의 연결 관계</tspan></text>
 <g data-boundary="server-process">
-<rect x="222" y="116" width="700" height="860" rx="16" fill="#f8fafc" stroke="#9eafbd" stroke-width="1.5"/>
-<text x="245" y="154" class="section" text-anchor="start"><tspan x="245" dy="0">GameServer 프로세스</tspan></text>
-<text x="891" y="154" class="small" text-anchor="end"><tspan x="891" dy="0">단일 .NET 프로세스</tspan></text>
+<rect x="228" y="130" width="812" height="1178" rx="16" fill="#f8fafc" stroke="#8298aa" stroke-width="1.5"/>
+<text x="252" y="178" class="section" text-anchor="start"><tspan x="252" dy="0">GameServer 프로세스</tspan></text>
+<text x="1016" y="178" class="note" text-anchor="end"><tspan x="1016" dy="0">단일 .NET 프로세스</tspan></text>
 <g data-project="GameServer">
-<rect x="245" y="183" width="654" height="379" rx="12" fill="#edf4fc" stroke="#b9cfe5" />
-<text x="266" y="222" class="section" text-anchor="start"><tspan x="266" dy="0">GameServer</tspan></text>
-<text x="879" y="222" class="body" text-anchor="end"><tspan x="879" dy="0">게임 기능 · 실행 프로젝트</tspan></text>
-<rect x="265" y="241" width="614" height="55" rx="8" fill="#dfeafa" stroke="#b9cfe5" />
-<text x="282" y="276" class="body" text-anchor="start"><tspan x="282" dy="0">Program · 설정 로드 / 객체 구성 / 서버 수명 관리</tspan></text>
+<rect x="250" y="208" width="768" height="534" rx="12" fill="#eaf2fc" stroke="#a9c4df" />
+<text x="274" y="250" class="section" text-anchor="start"><tspan x="274" dy="0">GameServer</tspan></text>
+<text x="994" y="250" class="note" text-anchor="end"><tspan x="994" dy="0">게임 기능 · 실행 프로젝트</tspan></text>
+<rect x="274" y="270" width="720" height="62" rx="8" fill="#dce9fa" stroke="#a9c4df" />
+<text x="292" y="310" class="body" text-anchor="start"><tspan x="292" dy="0">Program · 설정 로드 / 객체 구성 / 서버 수명 관리</tspan></text>
 <g data-component="packets">
-<rect x="265" y="312" width="295" height="96" rx="12" fill="#fff" stroke="#cad6e0" />
-<text x="283" y="343" class="name" text-anchor="start"><tspan x="283" dy="0">패킷 · 게임 핸들러</tspan></text>
-<text x="283" y="373" class="small" text-anchor="start"><tspan x="283" dy="0">GSPacketHandler · GSPacket</tspan><tspan x="283" dy="25">Protocol · Protobuf 메시지</tspan></text>
+<rect x="274" y="350" width="352" height="176" rx="12" fill="#fff" stroke="#b5c5d2" />
+<text x="292" y="390" class="name" text-anchor="start"><tspan x="292" dy="0">패킷 · 게임 핸들러</tspan></text>
+<text x="292" y="424" class="body" text-anchor="start"><tspan x="292" dy="0">GSPacketHandler</tspan><tspan x="292" dy="36">GSPacket · Protocol</tspan><tspan x="292" dy="36">Protobuf 메시지</tspan></text>
 </g>
 <g data-component="player-state">
-<rect x="580" y="312" width="299" height="96" rx="12" fill="#fff" stroke="#cad6e0" />
-<text x="598" y="343" class="name" text-anchor="start"><tspan x="598" dy="0">연결별 게임 상태</tspan></text>
-<text x="598" y="373" class="small" text-anchor="start"><tspan x="598" dy="0">GameSession : Session</tspan><tspan x="598" dy="25">HeroManager · Hero 메모리</tspan></text>
+<rect x="642" y="350" width="352" height="176" rx="12" fill="#fff" stroke="#b5c5d2" />
+<text x="660" y="390" class="name" text-anchor="start"><tspan x="660" dy="0">연결별 게임 상태</tspan></text>
+<text x="660" y="424" class="body" text-anchor="start"><tspan x="660" dy="0">GameSession : Session</tspan><tspan x="660" dy="36">HeroManager</tspan><tspan x="660" dy="36">사용자 · Hero 메모리</tspan></text>
 </g>
 <g data-component="matchmaking">
-<rect x="265" y="424" width="295" height="115" rx="12" fill="#fff" stroke="#cad6e0" />
-<text x="283" y="455" class="name" text-anchor="start"><tspan x="283" dy="0">매칭</tspan></text>
-<text x="283" y="485" class="small" text-anchor="start"><tspan x="283" dy="0">MatchManager</tspan><tspan x="283" dy="25">프로세스 메모리의 대기 · 방 상태</tspan><tspan x="283" dy="25">Redis 티켓 저장소 사용</tspan></text>
+<rect x="274" y="542" width="352" height="176" rx="12" fill="#fff" stroke="#b5c5d2" />
+<text x="292" y="582" class="name" text-anchor="start"><tspan x="292" dy="0">매칭</tspan></text>
+<text x="292" y="616" class="body" text-anchor="start"><tspan x="292" dy="0">MatchManager</tspan><tspan x="292" dy="36">메모리의 대기 · 방 상태</tspan><tspan x="292" dy="36">Redis 티켓 저장소 사용</tspan></text>
 </g>
 <g data-component="repositories">
-<rect x="580" y="424" width="299" height="115" rx="12" fill="#fff" stroke="#cad6e0" />
-<text x="598" y="455" class="name" text-anchor="start"><tspan x="598" dy="0">저장소 접근</tspan></text>
-<text x="598" y="485" class="small" text-anchor="start"><tspan x="598" dy="0">DataBaseRepository</tspan><tspan x="598" dy="25">LoginDB · HeroDB</tspan><tspan x="598" dy="25">RedisMatchmakingStore</tspan></text>
+<rect x="642" y="542" width="352" height="176" rx="12" fill="#fff" stroke="#b5c5d2" />
+<text x="660" y="582" class="name" text-anchor="start"><tspan x="660" dy="0">저장소 접근</tspan></text>
+<text x="660" y="616" class="body" text-anchor="start"><tspan x="660" dy="0">DataBaseRepository</tspan><tspan x="660" dy="36">LoginDB · HeroDB</tspan><tspan x="660" dy="36">RedisMatchmakingStore</tspan></text>
 </g>
 </g>
-<path data-relation="project-reference" class="edge" d="M 572 562 V 624" marker-end="url(#arrow)"/>
-<text x="594" y="599" class="name" text-anchor="start"><tspan x="594" dy="0">ServerCore 참조</tspan></text>
+<path data-relation="project-reference" class="edge" d="M 634 742 V 824" marker-end="url(#arrow)"/>
+<text x="663" y="793" class="name" text-anchor="start"><tspan x="663" dy="0">ServerCore 참조</tspan></text>
 <g data-project="ServerCore">
-<rect x="245" y="629" width="654" height="324" rx="12" fill="#edf6f3" stroke="#b9d3ca" />
-<text x="266" y="668" class="section" text-anchor="start"><tspan x="266" dy="0">ServerCore</tspan></text>
-<text x="879" y="668" class="body" text-anchor="end"><tspan x="879" dy="0">공통 서버 라이브러리</tspan></text>
+<rect x="250" y="830" width="768" height="454" rx="12" fill="#eaf5f0" stroke="#adcabd" />
+<text x="274" y="872" class="section" text-anchor="start"><tspan x="274" dy="0">ServerCore</tspan></text>
+<text x="994" y="872" class="note" text-anchor="end"><tspan x="994" dy="0">공통 서버 라이브러리</tspan></text>
 <g data-component="network">
-<rect x="265" y="690" width="295" height="111" rx="12" fill="#fff" stroke="#cad6e0" />
-<text x="283" y="721" class="name" text-anchor="start"><tspan x="283" dy="0">TCP 네트워크</tspan></text>
-<text x="283" y="751" class="small" text-anchor="start"><tspan x="283" dy="0">Service · Listen</tspan><tspan x="283" dy="25">SocketAsyncEventArgs · 버퍼</tspan></text>
+<rect x="274" y="892" width="352" height="176" rx="12" fill="#fff" stroke="#b5c5d2" />
+<text x="292" y="932" class="name" text-anchor="start"><tspan x="292" dy="0">TCP 네트워크</tspan></text>
+<text x="292" y="966" class="body" text-anchor="start"><tspan x="292" dy="0">Service · Listen</tspan><tspan x="292" dy="36">SocketAsyncEventArgs</tspan><tspan x="292" dy="36">송수신 버퍼</tspan></text>
 </g>
 <g data-component="mysql-runtime">
-<rect x="580" y="690" width="299" height="111" rx="12" fill="#fff" stroke="#cad6e0" />
-<text x="598" y="721" class="name" text-anchor="start"><tspan x="598" dy="0">MySQL 실행 기반</tspan></text>
-<text x="598" y="751" class="small" text-anchor="start"><tspan x="598" dy="0">MysqlDataBase</tspan><tspan x="598" dy="25">DbWorkerPool · DbWorker</tspan></text>
+<rect x="642" y="892" width="352" height="176" rx="12" fill="#fff" stroke="#b5c5d2" />
+<text x="660" y="932" class="name" text-anchor="start"><tspan x="660" dy="0">MySQL 실행 기반</tspan></text>
+<text x="660" y="966" class="body" text-anchor="start"><tspan x="660" dy="0">MysqlDataBase</tspan><tspan x="660" dy="36">DbWorkerPool</tspan><tspan x="660" dy="36">DbWorker</tspan></text>
 </g>
 <g data-component="session-runtime">
-<rect x="265" y="818" width="295" height="112" rx="12" fill="#fff" stroke="#cad6e0" />
-<text x="283" y="849" class="name" text-anchor="start"><tspan x="283" dy="0">세션 · 연결 관리</tspan></text>
-<text x="283" y="879" class="small" text-anchor="start"><tspan x="283" dy="0">Session · SessionManager</tspan><tspan x="283" dy="25">SocketHeartBeat · 풀·큐</tspan></text>
+<rect x="274" y="1084" width="352" height="176" rx="12" fill="#fff" stroke="#b5c5d2" />
+<text x="292" y="1124" class="name" text-anchor="start"><tspan x="292" dy="0">세션 · 연결 관리</tspan></text>
+<text x="292" y="1158" class="body" text-anchor="start"><tspan x="292" dy="0">Session · 작업 큐</tspan><tspan x="292" dy="36">SessionManager · 풀</tspan><tspan x="292" dy="36">SocketHeartBeat</tspan></text>
 </g>
 <g data-component="redis-runtime">
-<rect x="580" y="818" width="299" height="112" rx="12" fill="#fff" stroke="#cad6e0" />
-<text x="598" y="849" class="name" text-anchor="start"><tspan x="598" dy="0">Redis 연결 기반</tspan></text>
-<text x="598" y="879" class="small" text-anchor="start"><tspan x="598" dy="0">RedisManager</tspan><tspan x="598" dy="25">연결 · DB 핸들 관리</tspan></text>
+<rect x="642" y="1084" width="352" height="176" rx="12" fill="#fff" stroke="#b5c5d2" />
+<text x="660" y="1124" class="name" text-anchor="start"><tspan x="660" dy="0">Redis 연결 기반</tspan></text>
+<text x="660" y="1158" class="body" text-anchor="start"><tspan x="660" dy="0">RedisManager</tspan><tspan x="660" dy="36">연결 · DB 핸들 관리</tspan></text>
 </g>
 </g></g>
-<g data-external="client">
-<rect x="20" y="700" width="176" height="103" rx="14" fill="#f5f7fa" stroke="#9fb2c3" />
-<text x="108" y="730" class="name" text-anchor="middle"><tspan x="108" dy="0">클라이언트</tspan></text>
-<text x="108" y="759" class="small" text-anchor="middle"><tspan x="108" dy="0">게임 클라이언트</tspan><tspan x="108" dy="25">ServerSmokeTester</tspan></text>
+<g data-external="client"><title>게임 클라이언트 / ServerSmokeTester</title>
+<rect x="16" y="914" width="200" height="142" rx="14" fill="#f4f7fa" stroke="#819aad" />
+<text x="116" y="955" class="name" text-anchor="middle"><tspan x="116" dy="0">클라이언트</tspan></text>
+<text x="116" y="996" class="note" text-anchor="middle"><tspan x="116" dy="0">게임 클라이언트</tspan><tspan x="116" dy="34">스모크 테스터</tspan></text>
 </g>
-<path data-relation="tcp-connection" class="edge" d="M 201 752 H 260" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
-<text x="230" y="734" class="small" text-anchor="middle"><tspan x="230" dy="0">TCP</tspan></text>
-<text x="1050" y="391" class="name" text-anchor="middle"><tspan x="1050" dy="0">외부 저장소</tspan></text>
+<path data-relation="tcp-connection" class="edge" d="M 221 985 H 268" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<text x="245" y="966" class="note" text-anchor="middle"><tspan x="245" dy="0">TCP</tspan></text>
+<text x="1160" y="539" class="name" text-anchor="middle"><tspan x="1160" dy="0">외부 저장소</tspan></text>
 <g data-external="redis">
-<path d="M 960 444 C 960 420, 1140 420, 1140 444 V 508 C 1140 532, 960 532, 960 508 Z" fill="#f5f7fa" stroke="#9fb2c3"/>
-<path d="M 960 444 C 960 468, 1140 468, 1140 444" fill="none" stroke="#9fb2c3"/>
-<text x="1050" y="484" class="section" text-anchor="middle"><tspan x="1050" dy="0">Redis</tspan></text>
-<text x="1050" y="511" class="body" text-anchor="middle"><tspan x="1050" dy="0">매칭 티켓</tspan></text>
+<path d="M 1060 594 C 1060 568, 1260 568, 1260 594 V 678 C 1260 704, 1060 704, 1060 678 Z" fill="#f4f7fa" stroke="#819aad" stroke-width="1.4"/>
+<path d="M 1060 594 C 1060 620, 1260 620, 1260 594" fill="none" stroke="#819aad" stroke-width="1.4"/>
+<text x="1160" y="646" class="section" text-anchor="middle"><tspan x="1160" dy="0">Redis</tspan></text>
+<text x="1160" y="682" class="body" text-anchor="middle"><tspan x="1160" dy="0">매칭 티켓</tspan></text>
 </g>
-<path data-relation="redis-connection" class="edge" d="M 884 479 H 955" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
-<text x="920" y="461" class="small" text-anchor="middle"><tspan x="920" dy="0">티켓</tspan></text>
+<path data-relation="redis-connection" class="edge" d="M 999 636 H 1054" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<text x="1027" y="616" class="note" text-anchor="middle"><tspan x="1027" dy="0">티켓</tspan></text>
 <g data-external="mysql">
-<path d="M 960 715 C 960 691, 1140 691, 1140 715 V 779 C 1140 803, 960 803, 960 779 Z" fill="#f5f7fa" stroke="#9fb2c3"/>
-<path d="M 960 715 C 960 739, 1140 739, 1140 715" fill="none" stroke="#9fb2c3"/>
-<text x="1050" y="755" class="section" text-anchor="middle"><tspan x="1050" dy="0">MySQL</tspan></text>
-<text x="1050" y="782" class="body" text-anchor="middle"><tspan x="1050" dy="0">사용자 · Hero</tspan></text>
+<path d="M 1060 943 C 1060 917, 1260 917, 1260 943 V 1027 C 1260 1053, 1060 1053, 1060 1027 Z" fill="#f4f7fa" stroke="#819aad" stroke-width="1.4"/>
+<path d="M 1060 943 C 1060 969, 1260 969, 1260 943" fill="none" stroke="#819aad" stroke-width="1.4"/>
+<text x="1160" y="995" class="section" text-anchor="middle"><tspan x="1160" dy="0">MySQL</tspan></text>
+<text x="1160" y="1031" class="body" text-anchor="middle"><tspan x="1160" dy="0">사용자 · Hero</tspan></text>
 </g>
-<path data-relation="mysql-connection" class="edge" d="M 884 747 H 955" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
-<text x="920" y="729" class="small" text-anchor="middle"><tspan x="920" dy="0">SQL</tspan></text>
-<rect x="32" y="1002" width="1096" height="53" rx="9" fill="#fff" stroke="#d6dfe6" />
-<text x="50" y="1035" class="small" text-anchor="start"><tspan x="50" dy="0">박스 경계: 프로세스 · 프로젝트 · 기능 묶음</tspan></text>
-<path data-relation="legend-dependency" class="edge" d="M 610 1028 H 650" marker-end="url(#arrow)"/>
-<text x="667" y="1035" class="small" text-anchor="start"><tspan x="667" dy="0">프로젝트 의존</tspan></text>
-<path data-relation="legend-communication" class="edge" d="M 843 1028 H 883" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
-<text x="900" y="1035" class="small" text-anchor="start"><tspan x="900" dy="0">외부 통신</tspan></text>
+<path data-relation="mysql-connection" class="edge" d="M 999 985 H 1054" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<text x="1027" y="965" class="note" text-anchor="middle"><tspan x="1027" dy="0">SQL</tspan></text>
+<rect x="32" y="1332" width="1216" height="66" rx="9" fill="#fff" stroke="#c8d4de" />
+<text x="51" y="1375" class="note" text-anchor="start"><tspan x="51" dy="0">테두리: 프로세스 · 프로젝트 · 기능</tspan></text>
+<path data-relation="legend-dependency" class="edge" d="M 645 1366 H 687" marker-end="url(#arrow)"/>
+<text x="705" y="1375" class="note" text-anchor="start"><tspan x="705" dy="0">프로젝트 의존</tspan></text>
+<path data-relation="legend-communication" class="edge" d="M 941 1366 H 983" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<text x="1000" y="1375" class="note" text-anchor="start"><tspan x="1000" dy="0">외부 통신</tspan></text>
 </svg>
