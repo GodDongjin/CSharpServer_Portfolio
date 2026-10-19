@@ -34,7 +34,7 @@ namespace ServerCore.Network
         {
             ArgumentNullException.ThrowIfNull(socket);
 
-            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.NoDelay, flag);
+            socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, flag);
         }
 
         public void SocketTimeOut(Socket? socket, Int32 time = 10000)
