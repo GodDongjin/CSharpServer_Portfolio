@@ -24,6 +24,6 @@ pwsh -File ./export-portfolio.ps1
 2. ZIP 안의 `CSharpServer` 폴더 내용을 저장소 루트로 사용합니다. `README.md`, `CSharpServer.slnx`, `Server`, `docs`와 숨김 파일인 `.gitignore`를 포함합니다.
 3. 기존 작업 폴더의 `.git`과 로컬 백업을 함께 복사하지 않습니다.
 
-업로드 전 확인 항목과 공개 패키지 검증 기록은 [업로드 전 최종 확인](RELEASE_CHECKLIST.md)을 참고하세요.
+공개 패키지의 빌드·테스트·포함 파일 검증 기록은 [검토 결과](PORTFOLIO_REVIEW.md#공개-패키지-검증-2026-10-12)를 참고하세요.
 
 [README로 돌아가기](../README.md)

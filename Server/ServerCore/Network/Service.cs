@@ -93,7 +93,7 @@ namespace ServerCore.Network
             _writePool.Dispose();
         }
 
-        public void ReturnEventArg(SocketAsyncEventArgs read_args, SocketAsyncEventArgs write_args)
+        public void RetrunEventArg(SocketAsyncEventArgs read_args, SocketAsyncEventArgs write_args)
         {
             if(read_args is null || write_args is null)
             {
