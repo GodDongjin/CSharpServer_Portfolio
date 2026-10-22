@@ -16,8 +16,38 @@
 | sustained_load | 3600.06 | 1799156 | 0 | 499.76 | 76 | 129 | 842 |
 | low_load_recovery | 120.97 | 7200 | 0 | 59.52 | 49 | 93 | 0 |
 
-시작 자원: {"working_set_mb": 66.73, "private_mb": 28.73, "cpu_seconds": 0.953}
-무부하 후 자원: {"working_set_mb": 72.87, "private_mb": 32.22, "cpu_seconds": 779.281}
-정리·종료: {"test_rows_remaining": "0", "fresh_login_after_recovery": true, "minimum_ping_count": 347, "server_exit_code": 0, "graceful_shutdown_log": null, "failure": null}
+**시작 자원:**
 
-상세 시계열은 TestResults/SoakReview/run-2026-10-09/timeline.jsonl에 보관한다. 장시간 메모리 증가나 지연 추세는 시계열과 함께 판단해야 하며, 종료 시점 메모리 두 값만으로 누수 유무를 확정하지 않는다.
+```json
+{
+  "working_set_mb": 66.73,
+  "private_mb": 28.73,
+  "cpu_seconds": 0.953
+}
+```
+
+**무부하 후 자원:**
+
+```json
+{
+  "working_set_mb": 72.87,
+  "private_mb": 32.22,
+  "cpu_seconds": 779.281
+}
+```
+
+**정리·종료:**
+
+```json
+{
+  "test_rows_remaining": "0",
+  "fresh_login_after_recovery": true,
+  "minimum_ping_count": 347,
+  "server_exit_code": 0,
+  "graceful_shutdown_log": null,
+  "failure": null
+}
+```
+
+상세 시계열은 TestResults/SoakReview/run-2026-10-09/timeline.jsonl에 보관한다.  
+장시간 메모리 증가나 지연 추세는 시계열과 함께 판단해야 하며, 종료 시점 메모리 두 값만으로 누수 유무를 확정하지 않는다.

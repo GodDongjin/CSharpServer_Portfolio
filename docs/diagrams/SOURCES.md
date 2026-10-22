@@ -1,16 +1,23 @@
 # 도식 편집 원본
 
-[서버 구조도 SVG](overview.svg)는 1280px 너비의 고정 배치로 프로세스·프로젝트 경계, 기능별 책임과 외부 시스템 연결을 표시합니다. `data-boundary`는 서버 프로세스, `data-project`는 프로젝트, `data-component`는 기능 묶음, `data-external`은 외부 시스템을 나타냅니다. 프로젝트 사이의 화살표는 참조 관계, 양방향 선은 외부 통신입니다.
+[서버 구조도 SVG](overview.svg)는 1280px 너비의 고정 배치로 프로세스·프로젝트 경계, 기능별 책임과 외부 시스템 연결을 표시합니다.  
+`data-boundary`는 서버 프로세스, `data-project`는 프로젝트, `data-component`는 기능 묶음, `data-external`은 외부 시스템을 나타냅니다.  
+프로젝트 사이의 화살표는 참조 관계, 양방향 선은 외부 통신입니다.
 
-구조도 본문은 26px, 보조 설명은 24px 이상의 진한 글자를 사용합니다. 긴 식별자와 설명은 줄바꿈하고, 상자 높이와 줄 간격을 확보해 README의 800~860px 표시 폭에서도 읽을 수 있도록 구성했습니다.
+구조도 본문은 26px, 보조 설명은 24px 이상의 진한 글자를 사용합니다.  
+긴 식별자와 설명은 줄바꿈하고, 상자 높이와 줄 간격을 확보해 README의 800~860px 표시 폭에서도 읽을 수 있도록 구성했습니다.
 
-아래 전체 구성도 Mermaid는 구조도의 편집용 명세이며 자동 배치 결과는 SVG와 다를 수 있습니다. 나머지 7개 호출 흐름도는 Mermaid 11.4.1과 맑은 고딕으로 렌더링한 SVG입니다. 도식을 수정하면 대응 SVG와 본문 설명도 함께 갱신하고, README 표시 폭에서 글자와 연결선을 확인합니다.
+아래 전체 구성도 Mermaid는 구조도의 편집용 명세이며 자동 배치 결과는 SVG와 다를 수 있습니다.  
+나머지 7개 호출 흐름도는 Mermaid 11.4.1과 맑은 고딕으로 렌더링한 SVG입니다.  
+도식을 수정하면 대응 SVG와 본문 설명도 함께 갱신하고, README 표시 폭에서 글자와 연결선을 확인합니다.
 
 <a id="overview"></a>
 
 ## 서버 전체 구성
 
-GameServer와 ServerCore는 같은 서버 프로세스 안의 프로젝트입니다. GameServer가 ServerCore를 참조하며, GameSession은 Session을 상속합니다. 내부 상자는 기능 묶음으로, 별도 프로세스나 실행 단계를 뜻하지 않습니다. 클라이언트의 TCP 연결, MySQL 접근, Redis 티켓 접근만 외부 통신선으로 표시합니다. RedisManager가 준비한 연결은 Program을 통해 RedisMatchmakingStore에 전달됩니다.
+GameServer와 ServerCore는 같은 서버 프로세스 안의 프로젝트입니다. GameServer가 ServerCore를 참조하며, GameSession은 Session을 상속합니다.  
+내부 상자는 기능 묶음으로, 별도 프로세스나 실행 단계를 뜻하지 않습니다. 클라이언트의 TCP 연결, MySQL 접근, Redis 티켓 접근만 외부 통신선으로 표시합니다.  
+RedisManager가 준비한 연결은 Program을 통해 RedisMatchmakingStore에 전달됩니다.
 
 ```text
 flowchart TB
